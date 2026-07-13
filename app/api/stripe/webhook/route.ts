@@ -7,9 +7,6 @@ function stripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2024-06-20" });
 }
 
-// Stripe needs the raw body to verify the signature — disable Next.js body parsing
-export const config = { api: { bodyParser: false } };
-
 async function getRawBody(req: NextRequest): Promise<Buffer> {
   const chunks: Uint8Array[] = [];
   const reader = req.body?.getReader();
