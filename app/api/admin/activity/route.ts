@@ -53,11 +53,11 @@ export async function GET() {
     const end = new Date(start);
     end.setDate(start.getDate() + 7);
     const label = start.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-    const signups = (allBiz ?? []).filter((b) => {
+    const signups = (allBiz ?? []).filter((b: any) => {
       const d = new Date(b.created_at);
       return d >= start && d < end;
     }).length;
-    const weekQuotes = (quotes ?? []).filter((q) => {
+    const weekQuotes = (quotes ?? []).filter((q: any) => {
       const d = new Date(q.created_at);
       return d >= start && d < end;
     }).length;
