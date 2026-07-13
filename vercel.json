@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/ai-support",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/expiry-reminder",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}
