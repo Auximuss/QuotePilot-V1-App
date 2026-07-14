@@ -34,31 +34,35 @@ export default function AuthPage() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { business_name: businessName, trade } },
-    });
-    if (error) {
-      setLoading(false);
-      setError(error.message);
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
       return;
     }
 
-    if (!data.session) {
+    setLoading(true);
+
+    const res = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, businessName, trade }),
+    });
+    const json = await res.json();
+
+    if (!res.ok) {
       setLoading(false);
-      setError("Check your email to confirm your account, then log in.");
+      setError(json.error || "Something went wrong. Please try again.");
+      return;
+    }
+
+    // User created server-side — now sign in client-side to get session
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError) {
+      setLoading(false);
+      setError("Account created! Please log in.");
       setTab("login");
       return;
     }
-
-    await supabase.from("businesses").insert({
-      owner_id: data.user!.id,
-      name: businessName || "My Business",
-      trade,
-    });
 
     setLoading(false);
     router.push("/home");
@@ -203,19 +207,44 @@ function Field({
   onChange: (v: string) => void;
   placeholder?: string;
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === "password";
+  const inputType = isPassword ? (showPassword ? "text" : "password") : type;
+
   return (
     <label className="block rounded-xl border border-line bg-panel px-4 pb-2 pt-3.5 focus-within:border-hazard focus-within:bg-panelRaised focus-within:shadow-[0_0_0_4px_#ff6a1f1f]">
       <span className="mb-0.5 block font-mono text-[9.5px] uppercase tracking-wider text-textDim">
         {label}
       </span>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        required
-        className="w-full bg-transparent text-sm text-paper placeholder:text-textDimmer"
-      />
+      <div className="flex items-center">
+        <input
+          type={inputType}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          required
+          className="w-full bg-transparent text-sm text-paper placeholder:text-textDimmer"
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword((s) => !s)}
+            className="ml-2 shrink-0 text-textDim hover:text-paper transition-colors"
+            tabIndex={-1}
+          >
+            {showPassword ? (
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M1 1l22 22" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            )}
+          </button>
+        )}
+      </div>
     </label>
   );
 }
