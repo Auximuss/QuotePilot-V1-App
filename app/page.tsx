@@ -42,15 +42,28 @@ export default function AuthPage() {
 
     setLoading(true);
 
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { business_name: businessName, trade } },
-    });
-
-    if (signUpError) {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/signup`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+          },
+          body: JSON.stringify({ email, password, data: { business_name: businessName, trade } }),
+        }
+      );
+      const json = await res.json();
+      if (!res.ok) {
+        setLoading(false);
+        setError(json.error_description || json.msg || json.error || "Signup failed");
+        return;
+      }
+    } catch (e: any) {
       setLoading(false);
-      setError(`Error: ${signUpError.message} | Status: ${signUpError.status ?? "none"}`);
+      setError(e.message || "Network error during signup");
       return;
     }
 
