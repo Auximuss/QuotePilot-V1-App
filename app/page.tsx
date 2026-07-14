@@ -43,18 +43,17 @@ export default function AuthPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/signup`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
-          },
-          body: JSON.stringify({ email, password, data: { business_name: businessName, trade } }),
-        }
-      );
+      const SUPA_URL = "https://mppnrqtfcbapkohsogap.supabase.co";
+      const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wcG5ycXRmY2JhcGtvaHNvZ2FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNzkzMzYsImV4cCI6MjA5ODc1NTMzNn0.QG5fNZyOs03OOyQa03mb067Gg2lAg0EVPD4lDdYyKG0";
+      const res = await fetch(`${SUPA_URL}/auth/v1/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPA_KEY,
+          Authorization: `Bearer ${SUPA_KEY}`,
+        },
+        body: JSON.stringify({ email, password, data: { business_name: businessName, trade } }),
+      });
       const json = await res.json();
       if (!res.ok) {
         setLoading(false);
@@ -63,7 +62,7 @@ export default function AuthPage() {
       }
     } catch (e: any) {
       setLoading(false);
-      setError(e.message || "Network error during signup");
+      setError(`URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL} | ${e.message}`);
       return;
     }
 
