@@ -50,7 +50,7 @@ export default function AuthPage() {
 
     if (signUpError) {
       setLoading(false);
-      setError(signUpError.message);
+      setError(`Error: ${signUpError.message} | Status: ${signUpError.status ?? "none"}`);
       return;
     }
 
