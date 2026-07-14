@@ -85,6 +85,15 @@ input:focus {
   outline: none;
 }
 
+/* Hide scrollbar but keep scrollability */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* subtle blueprint grid, used behind the auth screen */
 .bp-grid {
   background-image:

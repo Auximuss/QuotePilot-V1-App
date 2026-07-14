@@ -36,6 +36,8 @@ export default function CustomerPortalPage() {
   const [questionSent, setQuestionSent] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/quotes/public/${id}`)
@@ -53,6 +55,11 @@ export default function CustomerPortalPage() {
         setFetchError("Failed to load quote.");
         setLoading(false);
       });
+    // Load photos
+    fetch(`/api/quotes/${id}/photos`)
+      .then((r) => r.json())
+      .then((d) => { if (d.photos?.length) setPhotos(d.photos); })
+      .catch(() => {});
   }, [id]);
 
   async function handleAccept() {
@@ -158,6 +165,30 @@ export default function CustomerPortalPage() {
         {quote.notes && (
           <div className="mt-2 rounded-lg border border-line bg-panelRaised px-3 py-2 text-[11px] text-textDim">
             {quote.notes}
+          </div>
+        )}
+
+        {/* Photo attachments */}
+        {photos.length > 0 && (
+          <div className="mt-3">
+            <div className="mb-1.5 font-mono text-[9px] uppercase tracking-wider text-textDimmer">Photos</div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {photos.map((url, i) => (
+                <button key={i} onClick={() => setLightboxPhoto(url)} className="aspect-square overflow-hidden rounded-lg border border-line bg-panelRaised">
+                  <img src={url} alt={`Photo ${i + 1}`} className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Photo lightbox */}
+        {lightboxPhoto && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+            onClick={() => setLightboxPhoto(null)}
+          >
+            <img src={lightboxPhoto} alt="Photo" className="max-h-[90vh] max-w-full rounded-xl object-contain" />
           </div>
         )}
 

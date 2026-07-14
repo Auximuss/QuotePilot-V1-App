@@ -306,7 +306,31 @@ export default function AdminPage() {
                 <option value="business">Business</option>
               </select>
             </div>
-            <div className="font-mono text-[10px] text-textDimmer">{filteredUsers.length} users</div>
+            <div className="flex items-center justify-between">
+              <div className="font-mono text-[10px] text-textDimmer">{filteredUsers.length} users</div>
+              <button
+                onClick={() => {
+                  const header = "Business Name,Email,Trade,Plan,Status,Joined";
+                  const rows = filteredUsers.map((u) =>
+                    [u.businessName, u.email, u.trade, u.plan, u.status, new Date(u.joinedAt).toLocaleDateString("en-GB")]
+                      .map((v) => `"${(v || "").replace(/"/g, '""')}"`)
+                      .join(",")
+                  );
+                  const csv = [header, ...rows].join("\n");
+                  const blob = new Blob([csv], { type: "text/csv" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `users-${new Date().toISOString().slice(0, 10)}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="flex items-center gap-1 rounded-lg border border-line px-2.5 py-1 font-mono text-[10px] text-textDim transition-colors hover:border-hazard hover:text-hazard"
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export CSV
+              </button>
+            </div>
             <div className="space-y-2">
               {filteredUsers.map((u) => (
                 <div key={u.businessId} className="rounded-2xl border border-line bg-panel px-4 py-3">

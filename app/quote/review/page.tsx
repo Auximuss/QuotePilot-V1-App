@@ -28,6 +28,19 @@ function ReviewPageContent() {
 
   const quote = getQuote(id);
 
+  // Load any previously uploaded photos for this quote
+  useEffect(() => {
+    if (!id) return;
+    fetch(`/api/quotes/${id}/photos`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.photos?.length) {
+          setPhotos(d.photos.map((url: string) => ({ url })));
+        }
+      })
+      .catch(() => {});
+  }, [id]);
+
   if (!quote) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center px-8 text-center">
