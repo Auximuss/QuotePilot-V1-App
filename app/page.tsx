@@ -42,20 +42,18 @@ export default function AuthPage() {
 
     setLoading(true);
 
-    const res = await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, businessName, trade }),
+    const { error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { business_name: businessName, trade } },
     });
-    const json = await res.json();
 
-    if (!res.ok) {
+    if (signUpError) {
       setLoading(false);
-      setError(json.error || "Something went wrong. Please try again.");
+      setError(signUpError.message);
       return;
     }
 
-    // User created server-side — now sign in client-side to get session
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
     if (signInError) {
       setLoading(false);
