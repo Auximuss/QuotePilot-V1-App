@@ -24,7 +24,7 @@ export default function PricingPage() {
     });
 
     if (res.status === 401) {
-      router.push("/auth/login");
+      router.push("/");
       return;
     }
 

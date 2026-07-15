@@ -94,7 +94,13 @@ function ReviewPageContent() {
   }
 
   function removePhoto(index: number) {
+    const photo = photos[index];
     setPhotos((prev) => prev.filter((_, i) => i !== index));
+    // Also delete from Supabase storage if we have the path
+    if (photo?.id) {
+      const supabase = createClient();
+      supabase.storage.from("quote-photos").remove([photo.id]).catch(() => {});
+    }
   }
 
   function handlePriceSave(itemId: string, value: number) {

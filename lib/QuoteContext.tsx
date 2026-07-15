@@ -68,7 +68,7 @@ type QuoteContextValue = {
   updateLineItemPrice: (quoteId: string, itemId: string, price: number) => void;
   updateCustomerField: (
     quoteId: string,
-    field: "customer" | "address" | "notes",
+    field: "customer" | "address" | "notes" | "customerEmail",
     value: string
   ) => void;
   toggleDeposit: (quoteId: string) => void;
@@ -286,7 +286,10 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => load());
+    } = supabase.auth.onAuthStateChange((event) => {
+      // TOKEN_REFRESHED fires every hour — don't reload data for that
+      if (event !== "TOKEN_REFRESHED") load();
+    });
 
     return () => {
       cancelled = true;

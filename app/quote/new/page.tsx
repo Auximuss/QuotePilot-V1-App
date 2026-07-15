@@ -15,26 +15,26 @@ export default function NewQuotePage() {
   const { createDraftFromAi, priceBookItems, businessName, isLoading } = useQuote();
   const { t } = useTranslation();
 
-  // Guard: only redirect once context has finished loading
-  useEffect(() => {
-    if (!isLoading && businessName === "") router.replace("/settings?setup=1");
-  }, [isLoading, businessName, router]);
-  if (isLoading || businessName === "") return null;
-
+  // All hooks must be declared before any early return
   const [inputMode, setInputMode] = useState<InputMode>("voice");
   const [textInput, setTextInput] = useState("");
-
   const [stage, setStage] = useState<Stage>("idle");
   const [seconds, setSeconds] = useState(0);
   const [transcript, setTranscript] = useState("");
   const [genLabel, setGenLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
-
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Guard: only redirect once context has finished loading
+  useEffect(() => {
+    if (!isLoading && businessName === "") router.replace("/settings?setup=1");
+  }, [isLoading, businessName, router]);
+
+  if (isLoading || businessName === "") return null;
 
   async function startRecording() {
     setError(null);

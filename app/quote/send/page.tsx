@@ -370,7 +370,7 @@ function SendPageContent() {
 
           {/* Total */}
           <div className="mt-3 flex justify-between border-t-2 border-[#221d14] pt-2.5 text-[12.5px] font-semibold">
-            <span>{t.quote.total} {vatRegistered ? "exc. VAT" : "inc. VAT"}</span>
+            <span>{t.quote.total}{vatRegistered ? " exc. VAT" : ""}</span>
             <span>£{(total + variationsTotal).toLocaleString("en-GB")}</span>
           </div>
           {vatRegistered && (
@@ -516,7 +516,7 @@ function SendPageContent() {
                 {t.quote.sendViaEmail}
               </button>
               <button
-                onClick={() => { navigator.clipboard.writeText(shareUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                onClick={() => { navigator.clipboard.writeText(shareUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); markSent(quote.id); setSendState("sent"); }}
                 className={`flex flex-none items-center justify-center gap-1 rounded-lg px-3 py-2.5 font-barlow text-[13px] font-bold uppercase tracking-wide transition-colors ${copied ? "bg-ok text-[#0d1a10]" : "bg-[#221d14] border border-[#3a3526] text-paper"}`}
               >
                 {copied ? "✓" : (
@@ -552,7 +552,7 @@ function SendPageContent() {
                   disabled={emailSending}
                   className="w-full rounded-lg bg-gradient-to-br from-hazard2 to-hazard py-2 font-barlow text-sm font-bold uppercase tracking-wide text-[#161006] disabled:opacity-50"
                 >
-                  {emailSending ? t.common.saving : t.quote.sendViaEmail}
+                  {emailSending ? "Sending…" : t.quote.sendViaEmail}
                 </button>
               </div>
             )}
