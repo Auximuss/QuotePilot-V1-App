@@ -348,7 +348,7 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
       id: `${id}-${idx}`,
       category: li.category,
       desc: li.description,
-      meta: li.unit ? `${li.quantity} ${li.unit}` : `${li.quantity}`,
+      meta: li.quantity != null && li.unit ? `${li.quantity} ${li.unit}` : li.quantity != null ? `${li.quantity}` : "",
       price: li.estimated_unit_price ?? 0,
     }));
 
@@ -428,14 +428,29 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
   }
 
   function updateLineItemPrice(quoteId: string, itemId: string, price: number) {
-    setQuotes((prev) =>
-      prev.map((q) =>
-        q.id !== quoteId
-          ? q
-          : { ...q, lineItems: q.lineItems.map((li) => (li.id === itemId ? { ...li, price } : li)) }
-      )
-    );
+    // Update local state AND compute the new total inside the same callback
+    // so we always have the correct accumulated sum — never stale state.
+    let newTotal = 0;
+    let lineItemDesc = "";
+    let lineItemCategory: "material" | "labour" = "labour";
 
+    setQuotes((prev) => {
+      return prev.map((q) => {
+        if (q.id !== quoteId) return q;
+        const updatedItems = q.lineItems.map((li) =>
+          li.id === itemId ? { ...li, price } : li
+        );
+        newTotal = updatedItems.reduce((sum, li) => sum + li.price, 0);
+        const target = q.lineItems.find((li) => li.id === itemId);
+        if (target) {
+          lineItemDesc = target.desc;
+          lineItemCategory = target.category;
+        }
+        return { ...q, lineItems: updatedItems };
+      });
+    });
+
+    // Update line item price in DB
     supabase
       .from("quote_line_items")
       .update({ unit_price: price, total_price: price })
@@ -444,39 +459,31 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
         if (error) console.error("Failed to save price edit:", error);
       });
 
-    const quote = getQuote(quoteId);
-    if (quote) {
-      const newTotal = quote.lineItems.reduce(
-        (sum, li) => sum + (li.id === itemId ? price : li.price),
-        0
-      );
-      supabase
-        .from("quotes")
-        .update({ subtotal: newTotal, total: newTotal })
-        .eq("id", quoteId)
-        .then(({ error }) => {
-          if (error) console.error("Failed to save updated total:", error);
-        });
+    // Update quote total in DB using the correctly accumulated newTotal
+    supabase
+      .from("quotes")
+      .update({ subtotal: newTotal, total: newTotal })
+      .eq("id", quoteId)
+      .then(({ error }) => {
+        if (error) console.error("Failed to save updated total:", error);
+      });
 
-      // Upsert corrected rate into price book so future AI quotes use real numbers.
-      // Requires price_book_items table — see README for SQL.
-      const lineItem = quote.lineItems.find((li) => li.id === itemId);
-      if (lineItem && businessId) {
-        supabase
-          .from("price_book_items")
-          .upsert(
-            {
-              business_id: businessId,
-              description: lineItem.desc,
-              category: lineItem.category,
-              unit_price: price,
-            },
-            { onConflict: "business_id,description" }
-          )
-          .then(({ error }) => {
-            if (error) console.error("Failed to upsert price book:", error);
-          });
-      }
+    // Upsert into price book so future AI quotes use real numbers
+    if (lineItemDesc && businessId) {
+      supabase
+        .from("price_book_items")
+        .upsert(
+          {
+            business_id: businessId,
+            description: lineItemDesc,
+            category: lineItemCategory,
+            unit_price: price,
+          },
+          { onConflict: "business_id,description" }
+        )
+        .then(({ error }) => {
+          if (error) console.error("Failed to upsert price book:", error);
+        });
     }
   }
 
