@@ -30,12 +30,14 @@ export function createClient() {
   );
 }
 
+const SUPABASE_SERVICE_ROLE_KEY = "sb_secret_5B11OY8W0KD1zzg-Z_W1ng_LZhGwAPm";
+
 // Service-role client — SERVER-SIDE ONLY
 export function createServiceClient() {
   const { createClient: createSupabaseClient } = require("@supabase/supabase-js");
   return createSupabaseClient(
     SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false } }
   );
 }
