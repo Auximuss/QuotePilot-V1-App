@@ -27,6 +27,7 @@ export async function GET() {
 
   const users = all.map((b: any) => ({
     businessId: b.id,
+    ownerId: b.owner_id,
     businessName: b.name ?? "—",
     trade: b.trade ?? "—",
     email: userMap[b.owner_id] ?? "—",

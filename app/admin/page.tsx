@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type UserRow = { businessId: string; businessName: string; trade: string; email: string; plan: string; status: string; joinedAt: string };
+type UserRow = { businessId: string; ownerId: string; businessName: string; trade: string; email: string; plan: string; status: string; joinedAt: string };
 type Message = { id: string; business_id: string; user_email: string; business_name: string; message: string; from_admin: boolean; is_ai_reply?: boolean; read_by_admin: boolean; created_at: string };
 type Conversation = { businessId: string; businessName: string; userEmail: string; lastMessage: string; lastAt: string; unread: number; messages: Message[] };
 type Stats = { totalUsers: number; activeSubscriptions: number; monthlyRevenue: number; quotesThisMonth: number; users: UserRow[] };
@@ -344,6 +344,25 @@ export default function AdminPage() {
                       <div className="mt-0.5 truncate text-[11px] text-textDim">{u.email}</div>
                       <div className="mt-0.5 text-[10px] text-textDimmer">{u.trade || "—"} · joined {new Date(u.joinedAt).toLocaleDateString("en-GB")}</div>
                     </div>
+                    <button
+                      onClick={async () => {
+                        if (!window.confirm(`Delete ${u.email} and all their data? This cannot be undone.`)) return;
+                        const res = await fetch("/api/admin/delete-user", {
+                          method: "DELETE",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ userId: u.ownerId }),
+                        });
+                        const d = await res.json();
+                        if (d.deleted) {
+                          setStats((prev) => prev ? { ...prev, users: prev.users.filter((x) => x.businessId !== u.businessId), totalUsers: prev.totalUsers - 1 } : prev);
+                        } else {
+                          alert("Delete failed: " + (d.error ?? "Unknown error"));
+                        }
+                      }}
+                      className="flex-none rounded-lg border border-warn/30 px-2.5 py-1.5 font-mono text-[10px] text-warn transition-colors hover:bg-warn/10"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
               ))}
