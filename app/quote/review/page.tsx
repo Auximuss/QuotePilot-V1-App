@@ -46,6 +46,14 @@ function ReviewPageContent() {
   const [pastCustomers, setPastCustomers] = useState<PastCustomer[]>([]);
   const [customerSuggestions, setCustomerSuggestions] = useState<PastCustomer[]>([]);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [tiersEnabled, setTiersEnabled] = useState(false);
+  const [tiersSaving, setTiersSaving] = useState(false);
+  const [tiersSaved, setTiersSaved] = useState(false);
+  const [tiers, setTiers] = useState([
+    { name: "Good", description: "Essential work only", priceDelta: 0 },
+    { name: "Better", description: "Standard finish with extras", priceDelta: 0 },
+    { name: "Best", description: "Premium — full spec, warranty included", priceDelta: 0 },
+  ]);
 
   const quote = getQuote(id);
 
@@ -559,6 +567,77 @@ function ReviewPageContent() {
             </button>
           </div>
           {photos.length > 0 && <div className="mt-1.5 text-[10px] text-textDimmer">{photos.filter(p => !p.uploading).length} photo{photos.length !== 1 ? "s" : ""} attached</div>}
+        </div>
+
+        {/* ── Good / Better / Best tiers ─────────────────────────── */}
+        <div className="mt-4">
+          <button
+            onClick={() => setTiersEnabled((v) => !v)}
+            className="flex w-full items-center justify-between rounded-xl border border-line bg-panel px-4 py-3"
+          >
+            <div className="text-left">
+              <div className="text-sm font-semibold">Offer pricing tiers <span className="ml-1 font-mono text-[10px] text-textDim">(optional)</span></div>
+              <div className="text-[11px] text-textDim">Give customers a Good / Better / Best choice</div>
+            </div>
+            <div className={`rounded-full px-2 py-0.5 font-mono text-[9.5px] font-bold ${tiersEnabled ? "bg-ok/15 text-ok" : "bg-line text-textDimmer"}`}>
+              {tiersEnabled ? "ON" : "OFF"}
+            </div>
+          </button>
+          {tiersEnabled && (
+            <div className="mt-2 rounded-xl border border-line bg-panel p-4 space-y-3">
+              <div className="text-[11px] text-textDim">Set a price adjustment vs your base quote for each tier. Negative = cheaper option.</div>
+              {tiers.map((tier, i) => (
+                <div key={tier.name} className="space-y-1.5">
+                  <div className={`font-mono text-[10px] font-bold uppercase tracking-wider ${i === 0 ? "text-blue-400" : i === 1 ? "text-hazard" : "text-ok"}`}>
+                    {tier.name}
+                  </div>
+                  <input
+                    type="text"
+                    value={tier.description}
+                    onChange={(e) => setTiers((prev) => prev.map((t, j) => j === i ? { ...t, description: e.target.value } : t))}
+                    placeholder="Description for this tier"
+                    className="field text-sm"
+                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-textDimmer">£ adj.</span>
+                    <input
+                      type="number"
+                      value={tier.priceDelta === 0 ? "" : tier.priceDelta}
+                      onChange={(e) => setTiers((prev) => prev.map((t, j) => j === i ? { ...t, priceDelta: parseFloat(e.target.value) || 0 } : t))}
+                      placeholder={`0  (base: £${quoteTotal(quote).toLocaleString("en-GB")})`}
+                      className="field pl-16 text-sm"
+                    />
+                  </div>
+                  <div className="text-right font-mono text-[10px] text-textDim">
+                    Total: £{(quoteTotal(quote) + (tier.priceDelta || 0)).toLocaleString("en-GB")}
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={async () => {
+                  setTiersSaving(true);
+                  // Save each tier as a separate record
+                  await Promise.all(tiers.map((t) =>
+                    fetch(`/api/quotes/${id}/tiers`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        name: t.name,
+                        lineItems: [{ desc: t.description, price: quoteTotal(quote) + (t.priceDelta || 0), id: t.name }],
+                      }),
+                    })
+                  ));
+                  setTiersSaving(false);
+                  setTiersSaved(true);
+                  setTimeout(() => setTiersSaved(false), 2000);
+                }}
+                disabled={tiersSaving}
+                className={`w-full rounded-xl py-2.5 text-sm font-bold disabled:opacity-50 ${tiersSaved ? "border border-ok/30 bg-ok/10 text-ok" : "bg-gradient-to-br from-hazard2 to-hazard text-[#161006]"}`}
+              >
+                {tiersSaving ? "Saving…" : tiersSaved ? "✓ Tiers saved" : "Save tiers"}
+              </button>
+            </div>
+          )}
         </div>
 
         <PrimaryButton className="mt-4 w-full" onClick={() => router.push(`/quote/send?id=${quote.id}`)}

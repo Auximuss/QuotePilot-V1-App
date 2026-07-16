@@ -27,6 +27,14 @@ function SendPageContent() {
   const [reviewEmailResult, setReviewEmailResult] = useState<string | null>(null);
   const [jobDoneLoading, setJobDoneLoading] = useState(false);
   const [jobDoneDone, setJobDoneDone] = useState(false);
+  const [healthIssues, setHealthIssues] = useState<{ severity: string; message: string }[]>([]);
+  const [stripePayLink, setStripePayLink] = useState<string | null>(null);
+  const [stripePayLoading, setStripePayLoading] = useState(false);
+  const [notesList, setNotesList] = useState<{ id: string; content: string; created_at: string }[]>([]);
+  const [newNote, setNewNote] = useState("");
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [showMaterialsList, setShowMaterialsList] = useState(false);
+  const [healthChecked, setHealthChecked] = useState(false);
   const quote = getQuote(id);
 
   const [sendState, setSendState] = useState<"idle" | "sending" | "sent">(
@@ -122,6 +130,29 @@ function SendPageContent() {
     window.addEventListener("focus", loadBiz);
     return () => window.removeEventListener("focus", loadBiz);
   }, []);
+
+  // Health score check for draft quotes
+  useEffect(() => {
+    if (!quote || quote.status !== "draft" || healthChecked) return;
+    setHealthChecked(true);
+    fetch("/api/quotes/health", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ quoteId: id, lineItems: quote.lineItems, total: quoteTotal(quote), customer: quote.customer, job: quote.job }),
+    })
+      .then((r) => r.json())
+      .then((d) => { if (d.issues) setHealthIssues(d.issues); })
+      .catch(() => {});
+  }, [id, quote?.status]);
+
+  // Load job notes for accepted quotes
+  useEffect(() => {
+    if (!quote || quote.status !== "accepted") return;
+    fetch(`/api/quotes/${id}/notes`)
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d.notes)) setNotesList(d.notes); })
+      .catch(() => {});
+  }, [id, quote?.status]);
 
   // Load existing job costing + variations + payment status for accepted quotes
   useEffect(() => {
@@ -461,6 +492,18 @@ function SendPageContent() {
             </div>
           )}
 
+          {/* Health score warnings */}
+          {healthIssues.length > 0 && (
+            <div className="no-print mt-3 space-y-1.5">
+              {healthIssues.map((issue, i) => (
+                <div key={i} className={`flex items-start gap-2 rounded-lg px-3 py-2 text-[11px] ${issue.severity === "error" ? "border border-red-500/30 bg-red-500/10 text-red-400" : "border border-warn/30 bg-warn/10 text-[#e0c26b]"}`}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="mt-0.5 flex-none"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <span>{issue.message}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Action buttons */}
           <div className="no-print mt-4 space-y-2">
             {/* Row 1: PDF + Invoice + Duplicate */}
@@ -787,6 +830,42 @@ function SendPageContent() {
           </div>
         )}
 
+        {/* ── Stripe payment link (accepted quotes) ───────────────────── */}
+        {quote.status === "accepted" && (
+          <div className="mt-4 w-full">
+            {stripePayLink ? (
+              <a
+                href={stripePayLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#635bff]/40 bg-[#635bff]/10 py-3 font-barlow text-[13px] font-bold uppercase tracking-wide text-[#a5a0ff]"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                Open Stripe Payment Link
+              </a>
+            ) : (
+              <button
+                onClick={async () => {
+                  setStripePayLoading(true);
+                  const res = await fetch(`/api/quotes/${id}/payment-link`, { method: "POST" });
+                  const d = await res.json();
+                  setStripePayLoading(false);
+                  if (d.url) { setStripePayLink(d.url); window.open(d.url, "_blank"); }
+                  else alert(d.error || "Could not create payment link — check Stripe is connected in Settings.");
+                }}
+                disabled={stripePayLoading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#635bff]/30 bg-[#635bff]/8 py-3 font-barlow text-[13px] font-bold uppercase tracking-wide text-[#a5a0ff] disabled:opacity-50"
+              >
+                {stripePayLoading ? (
+                  <><div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#635bff]/30 border-t-[#a5a0ff]" />Generating…</>
+                ) : (
+                  <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Generate Stripe Invoice Link</>
+                )}
+              </button>
+            )}
+          </div>
+        )}
+
         {/* ── Job costing (accepted quotes) ───────────────────────────── */}
         {quote.status === "accepted" && (
           <div className="mt-4 w-full">
@@ -848,6 +927,93 @@ function SendPageContent() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Materials shopping list ─────────────────────────────────── */}
+        {quote.lineItems.length > 0 && (
+          <div className="mt-4 w-full">
+            <button
+              onClick={() => setShowMaterialsList((v) => !v)}
+              className="flex w-full items-center justify-between rounded-xl border border-line bg-panel px-4 py-3"
+            >
+              <div>
+                <div className="text-left text-sm font-semibold">Materials list</div>
+                <div className="text-left text-[11px] text-textDim">View all line items as a shopping checklist</div>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${showMaterialsList ? "rotate-180" : ""}`}>
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            {showMaterialsList && (
+              <div className="mt-2 rounded-xl border border-line bg-panel p-4">
+                <div className="mb-3 text-[11px] text-textDim">Tap to copy or share with your supplier</div>
+                <div className="space-y-2">
+                  {quote.lineItems.map((item) => (
+                    <div key={item.id} className="flex items-center gap-3">
+                      <div className="h-4 w-4 flex-none rounded border border-line" />
+                      <div className="flex-1 text-[12px]">{item.desc}</div>
+                      <div className="font-mono text-[11px] text-textDim">£{item.price.toLocaleString("en-GB")}</div>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => {
+                    const text = quote.lineItems.map((i) => `• ${i.desc} — £${i.price.toLocaleString("en-GB")}`).join("\n");
+                    navigator.clipboard.writeText(`Materials for ${quote.job}:\n${text}\n\nTotal: £${quoteTotal(quote).toLocaleString("en-GB")}`);
+                  }}
+                  className="mt-3 w-full rounded-xl border border-line py-2 text-[11px] font-semibold text-textDim"
+                >
+                  Copy list to clipboard
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Job notes (accepted quotes) ─────────────────────────────── */}
+        {quote.status === "accepted" && (
+          <div className="mt-4 w-full">
+            <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-textDim">Job Notes</div>
+            <div className="space-y-2">
+              {notesList.map((note) => (
+                <div key={note.id} className="rounded-xl border border-line bg-panel px-4 py-3">
+                  <div className="text-[12px]">{note.content}</div>
+                  <div className="mt-1 font-mono text-[10px] text-textDimmer">
+                    {new Date(note.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  </div>
+                </div>
+              ))}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && newNote.trim()) { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
+                  placeholder="Add a note… (e.g. customer requested extra coat)"
+                  className="field flex-1 text-sm"
+                />
+                <button
+                  onClick={async () => {
+                    if (!newNote.trim() || noteSaving) return;
+                    setNoteSaving(true);
+                    const res = await fetch(`/api/quotes/${id}/notes`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ content: newNote.trim() }),
+                    });
+                    const d = await res.json();
+                    if (d.note) setNotesList((prev) => [...prev, d.note]);
+                    setNewNote("");
+                    setNoteSaving(false);
+                  }}
+                  disabled={!newNote.trim() || noteSaving}
+                  className="flex-none rounded-xl bg-gradient-to-br from-hazard2 to-hazard px-4 py-2 text-[12px] font-bold text-[#161006] disabled:opacity-40"
+                >
+                  {noteSaving ? "…" : "Add"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
