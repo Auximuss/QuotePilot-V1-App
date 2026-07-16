@@ -344,8 +344,8 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
   function createDraftFromAi(result: AiQuoteResult): string {
     const id = crypto.randomUUID();
 
-    const lineItems: LineItem[] = result.line_items.map((li, idx) => ({
-      id: `${id}-${idx}`,
+    const lineItems: LineItem[] = result.line_items.map((li) => ({
+      id: crypto.randomUUID(),
       category: li.category,
       desc: li.description,
       meta: li.quantity != null && li.unit ? `${li.quantity} ${li.unit}` : li.quantity != null ? `${li.quantity}` : "",
