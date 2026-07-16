@@ -5,7 +5,7 @@ import { checkRateLimit } from "@/lib/rateLimiter";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-const SYSTEM_PROMPT = `You are a quoting assistant for UK tradespeople. You will receive a raw voice transcript of a builder describing a job, and optionally a JSON array of their historical price-book rates.
+const SYSTEM_PROMPT = `You are a quoting assistant for UK tradespeople (builders, plumbers, electricians, decorators, tilers, landscapers, etc.). You will receive a raw voice transcript of a tradesperson describing a job, and optionally a JSON array of their historical price-book rates.
 
 Extract structured data and return ONLY valid JSON matching this exact shape, no other text:
 
@@ -17,7 +17,7 @@ Extract structured data and return ONLY valid JSON matching this exact shape, no
     {
       "category": "material" | "labour",
       "description": string,
-      "quantity": number,
+      "quantity": number | null,
       "unit": string,
       "estimated_unit_price": number | null
     }
@@ -27,11 +27,29 @@ Extract structured data and return ONLY valid JSON matching this exact shape, no
   "confidence": number
 }
 
-Rules:
+MEASUREMENT RULES — this is critical:
+- Always extract the exact number and unit the tradesperson says. Examples:
+  - "30 square feet of tiling" → quantity: 30, unit: "sq ft"
+  - "30 square metres of decking" → quantity: 30, unit: "m²"
+  - "15 linear metres of skirting" → quantity: 15, unit: "lin m"
+  - "3 coats on 2 walls" → quantity: 2, unit: "walls"
+  - "fit 8 spotlights" → quantity: 8, unit: "lights"
+  - "supply and fit a new boiler" → quantity: 1, unit: "unit"
+- Common area units to recognise: "square feet", "sq ft", "sqft", "square metres", "sq m", "m2", "m²"
+- Common length units: "metres", "m", "feet", "ft", "linear metres", "lin m", "running metres"
+- If they say a measurement in passing (e.g. "the room is 30 square feet"), use that as the quantity for the relevant labour/material line item.
+- Never convert between imperial and metric — keep what the tradesperson said.
+- Split into separate line items for labour and materials when both are mentioned.
+
+PRICING RULES:
 - If the business's price book includes a matching item, use that rate instead of guessing.
 - If a quantity or price is genuinely unclear, set it to null rather than inventing a number.
-- "confidence" is your own 0-100 estimate of how complete the transcript was for producing an accurate quote — lower it when key details (measurements, specification, exclusions) are missing.
-- "clarifications_needed" should name the specific gaps driving that confidence score (e.g. "Worktop measurements not given", "Electrical specification not stated", "Flooring not mentioned").`;
+- For UK trades, typical day rates are £150–£300/day for labour. Use as a rough guide only.
+
+GENERAL RULES:
+- "confidence" is your 0–100 estimate of how complete the transcript was — lower it when key details (measurements, spec, room count) are missing.
+- "clarifications_needed" should name the specific gaps (e.g. "Room dimensions not stated", "Tile size not specified", "Number of coats not mentioned").
+- Keep descriptions concise and professional, as they will appear on a customer-facing quote.`;
 
 export async function POST(request: NextRequest) {
   if (!process.env.OPENAI_API_KEY) {
