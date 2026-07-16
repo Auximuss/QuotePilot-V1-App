@@ -12,7 +12,7 @@ export async function sendEmail({
   html: string;
 }): Promise<{ sent: boolean; reason?: string }> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL || "quotes@demandpilot.app";
+  const from = process.env.RESEND_FROM_EMAIL || "Demand Pilot <onboarding@resend.dev>";
 
   if (!apiKey) return { sent: false, reason: "no_api_key" };
 
