@@ -35,6 +35,8 @@ function SendPageContent() {
   const [noteSaving, setNoteSaving] = useState(false);
   const [showMaterialsList, setShowMaterialsList] = useState(false);
   const [healthChecked, setHealthChecked] = useState(false);
+  const [showShareCard, setShowShareCard] = useState(false);
+  const [shareCardCopied, setShareCardCopied] = useState(false);
   const quote = getQuote(id);
 
   const [sendState, setSendState] = useState<"idle" | "sending" | "sent">(
@@ -259,6 +261,64 @@ function SendPageContent() {
     }).select().single();
     if (data) setVariations((prev) => [...prev, data as Variation]);
     setVarDesc(""); setVarAmount(""); setVarSaving(false); setShowVariationForm(false);
+  }
+
+  function generateShareCard() {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080; canvas.height = 1080;
+    const ctx = canvas.getContext("2d")!;
+    // Background
+    ctx.fillStyle = "#08090a"; ctx.fillRect(0, 0, 1080, 1080);
+    // Orange accent bar
+    const grad = ctx.createLinearGradient(0, 0, 1080, 0);
+    grad.addColorStop(0, "#ff8c4b"); grad.addColorStop(1, "#ff6a1f");
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, 1080, 8);
+    // "JOB WON" label
+    ctx.fillStyle = "#ff6a1f"; ctx.font = "bold 36px monospace";
+    ctx.fillText("JOB WON 🎉", 80, 160);
+    // Job title
+    ctx.fillStyle = "#ffffff"; ctx.font = "bold 72px sans-serif";
+    const job = quote.job || "New job";
+    // Word wrap job title
+    const words = job.split(" "); let line = ""; let y = 280;
+    for (const word of words) {
+      const test = line + word + " ";
+      if (ctx.measureText(test).width > 920 && line !== "") {
+        ctx.fillText(line.trim(), 80, y); line = word + " "; y += 90;
+      } else { line = test; }
+    }
+    ctx.fillText(line.trim(), 80, y);
+    // Amount
+    ctx.fillStyle = "#3fae5c"; ctx.font = "bold 96px monospace";
+    ctx.fillText(`£${total.toLocaleString("en-GB")}`, 80, y + 140);
+    // Business name
+    ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.font = "32px sans-serif";
+    ctx.fillText(displayName, 80, y + 220);
+    // Footer
+    ctx.fillStyle = "rgba(255,255,255,0.15)"; ctx.font = "24px monospace";
+    ctx.fillText("Quoted with Demand Pilot", 80, 980);
+    return canvas;
+  }
+
+  function downloadShareCard() {
+    const canvas = generateShareCard();
+    const a = document.createElement("a");
+    a.download = `job-won-${quote.id.slice(0, 8)}.png`;
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+  }
+
+  async function nativeShareCard() {
+    const canvas = generateShareCard();
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const file = new File([blob], "job-won.png", { type: "image/png" });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `Job won — £${total.toLocaleString("en-GB")}`, text: `Just won a job: ${quote.job}` });
+      } else {
+        downloadShareCard();
+      }
+    });
   }
 
   return (
@@ -827,6 +887,54 @@ function SendPageContent() {
         {jobDoneDone && (
           <div className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-ok/30 bg-ok/10 py-3.5 font-mono text-[11px] text-ok">
             ✓ Job marked complete — final invoice sent
+          </div>
+        )}
+
+        {/* ── Job won share card (accepted quotes) ────────────────────── */}
+        {quote.status === "accepted" && (
+          <div className="mt-4 w-full">
+            {!showShareCard ? (
+              <button
+                onClick={() => setShowShareCard(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-ok/30 bg-ok/8 py-3 font-barlow text-[13px] font-bold uppercase tracking-wide text-ok"
+              >
+                🎉 Share your win
+              </button>
+            ) : (
+              <div className="rounded-2xl border border-ok/30 bg-ok/8 p-4">
+                <div className="mb-3 text-center">
+                  <div className="font-barlow text-[15px] font-bold text-ok">Share your win!</div>
+                  <div className="mt-0.5 text-[11px] text-textDim">Download a card for Instagram, WhatsApp or TikTok</div>
+                </div>
+                {/* Preview card */}
+                <div className="mx-auto mb-4 w-full max-w-[260px] overflow-hidden rounded-2xl border border-line bg-[#08090a]">
+                  <div className="h-1.5 w-full bg-gradient-to-r from-hazard2 to-hazard" />
+                  <div className="px-5 pb-6 pt-5">
+                    <div className="font-mono text-[11px] font-bold text-hazard">JOB WON 🎉</div>
+                    <div className="mt-2 font-barlow text-[18px] font-bold leading-tight">{quote.job || "New job"}</div>
+                    <div className="mt-3 font-mono text-[28px] font-bold text-ok">£{total.toLocaleString("en-GB")}</div>
+                    <div className="mt-2 text-[11px] text-textDim">{displayName}</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={downloadShareCard}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-line bg-panel py-2.5 text-[12px] font-semibold"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                    Download
+                  </button>
+                  <button
+                    onClick={nativeShareCard}
+                    className="flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-hazard2 to-hazard py-2.5 text-[12px] font-bold text-[#161006]"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+                    Share
+                  </button>
+                </div>
+                <button onClick={() => setShowShareCard(false)} className="mt-2 w-full text-center text-[10px] text-textDimmer underline">Close</button>
+              </div>
+            )}
           </div>
         )}
 

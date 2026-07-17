@@ -8,6 +8,7 @@ import { useTranslation } from "@/lib/LanguageContext";
 import QuoteCard from "@/components/QuoteCard";
 import BottomNav from "@/components/BottomNav";
 import TopBar from "@/components/TopBar";
+import OnboardingModal from "@/components/OnboardingModal";
 
 function sb() {
   return createClient();
@@ -70,6 +71,7 @@ export default function HomePage() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <OnboardingModal />
       <TopBar
         title={t.home.title}
         subtitle={
