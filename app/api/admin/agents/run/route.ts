@@ -1,7 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import OpenAI from "openai";
-import { Resend } from "resend";
+
+async function sendEmail({ to, subject, text }: { to: string; subject: string; text: string }) {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "Alex at Demand Pilot <onboarding@resend.dev>",
+      to,
+      subject,
+      text,
+    }),
+  });
+  if (!res.ok) throw new Error(`Resend error: ${await res.text()}`);
+  return res.json();
+}
 
 const ADMIN_EMAILS = ["aux6998@gmail.com", "pryeralex492@gmail.com"];
 
@@ -104,7 +121,6 @@ async function runSender(supabase: SupabaseClient) {
 
   await agentLog(supabase, "Sender", `📤 Sending ${leads.length} emails...`, "info");
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
   let sent = 0;
 
   for (const lead of leads) {
@@ -114,8 +130,7 @@ async function runSender(supabase: SupabaseClient) {
       const body = (lead.email_body ?? "")
         .replace(/\[SIGNUP_LINK\]/g, "https://demand-pilot.vercel.app");
 
-      await resend.emails.send({
-        from: "Alex at Demand Pilot <onboarding@resend.dev>",
+      await sendEmail({
         to: lead.email,
         subject: lead.email_subject ?? "Free quoting tool for UK tradespeople",
         text: body,
@@ -159,9 +174,7 @@ async function runReporter(supabase: SupabaseClient) {
     `Reply rate:      ${byStatus("email_sent") ? Math.round((byStatus("replied") / byStatus("email_sent")) * 100) : 0}%`,
   ].join("\n");
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  await resend.emails.send({
-    from: "Demand Pilot Agents <onboarding@resend.dev>",
+  await sendEmail({
     to: "pryeralex492@gmail.com",
     subject: `📊 Agent Report — ${new Date().toLocaleDateString("en-GB")}`,
     text: report,
