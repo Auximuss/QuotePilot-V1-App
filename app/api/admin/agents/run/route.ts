@@ -28,26 +28,15 @@ async function agentLog(supabase: SupabaseClient, agent: string, message: string
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────
-// Uses Google Places API (Text Search + Place Details) — a proper API that
-// works from Vercel, never blocks, returns real UK business data.
-// Then uses Hunter.io to find email addresses from business websites.
+// Source 1: OpenStreetMap Overpass API — free, no auth, UK tradespeople data
+// Source 2: Companies House API — free UK gov API, no auth, registered companies
+// Then Hunter.io on any websites found to get email addresses.
 async function runScout(supabase: SupabaseClient) {
   const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
-  const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-
   if (!HUNTER_API_KEY) {
     await agentLog(supabase, "Scout", "✗ Missing HUNTER_API_KEY env var", "error");
     return { message: "Missing Hunter API key" };
   }
-  if (!GOOGLE_API_KEY) {
-    await agentLog(supabase, "Scout", "✗ Missing GOOGLE_API_KEY env var", "error");
-    return { message: "Missing Google API key" };
-  }
-
-  const TRADES = [
-    "plumber", "electrician", "builder", "roofer",
-    "plasterer", "carpenter", "gas engineer", "heating engineer",
-  ];
 
   let totalFound = 0;
   let totalWithEmail = 0;
@@ -70,13 +59,13 @@ async function runScout(supabase: SupabaseClient) {
     } catch { return null; }
   }
 
-  // ── Store a lead ───────────────────────────────────────────────────────────
-  async function storeLead(placeId: string, name: string, trade: string, website: string | null) {
+  // ── Store a lead (deduplicates by notes key) ───────────────────────────────
+  async function storeLead(key: string, name: string, trade: string, website: string | null, directEmail?: string | null) {
     const { data: existing } = await supabase
-      .from("outreach_leads").select("id").ilike("notes", `%${placeId}%`).limit(1);
+      .from("outreach_leads").select("id").ilike("notes", `%${key}%`).limit(1);
     if (existing?.length) return;
 
-    const email = website ? await hunterEmail(website) : null;
+    const email = directEmail ?? (website ? await hunterEmail(website) : null);
 
     const { error } = await supabase.from("outreach_leads").insert({
       business_name: name,
@@ -85,69 +74,136 @@ async function runScout(supabase: SupabaseClient) {
       location: "Nottingham",
       source: "scout",
       status: email ? "new" : "no_email",
-      notes: `https://maps.google.com/?cid=${placeId}`,
+      notes: key,
     });
-
-    if (error) {
-      await agentLog(supabase, "Scout", `✗ DB insert failed: ${error.message}`, "error");
-      return;
-    }
+    if (error) { await agentLog(supabase, "Scout", `✗ DB: ${error.message}`, "error"); return; }
 
     totalFound++;
     if (email) {
       totalWithEmail++;
       await agentLog(supabase, "Scout", `✓ ${name} — ${email}`, "success", { website, trade });
     } else {
-      await agentLog(supabase, "Scout", `◎ ${name} — ${website ? "no email on Hunter" : "no website on Google"}`, "info");
+      await agentLog(supabase, "Scout", `◎ ${name} — ${website ? "no email on Hunter" : "no website found"}`, "info");
     }
     await new Promise(r => setTimeout(r, 300));
   }
 
-  await agentLog(supabase, "Scout", `🔍 Searching Google Places for ${TRADES.length} trades in Nottingham...`, "info");
+  // ── Source 1: OpenStreetMap Overpass API ───────────────────────────────────
+  // Nottingham bounding box: 52.88,-1.28,53.08,-0.98
+  const OSM_CRAFTS: Record<string, string> = {
+    plumber:           "plumber",
+    electrician:       "electrician",
+    builder:           "builder",
+    roofer:            "roofer",
+    plasterer:         "plasterer",
+    carpenter:         "carpenter",
+    "gas engineer":    "hvac_technician",
+    "heating engineer":"hvac_technician",
+  };
 
-  for (const trade of TRADES) {
+  await agentLog(supabase, "Scout", "🗺 Querying OpenStreetMap for Nottingham tradespeople...", "info");
+
+  for (const [trade, osmTag] of Object.entries(OSM_CRAFTS)) {
     try {
-      // Step 1: Text Search — find businesses matching this trade in Nottingham
-      const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(trade + " in Nottingham UK")}&key=${GOOGLE_API_KEY}`;
-      const searchRes = await fetch(searchUrl, { signal: AbortSignal.timeout(10000) });
-      const searchData = await searchRes.json();
+      const query = `[out:json][timeout:20];(node["craft"="${osmTag}"](52.88,-1.28,53.08,-0.98);way["craft"="${osmTag}"](52.88,-1.28,53.08,-0.98););out body;`;
+      const res = await fetch("https://overpass-api.de/api/interpreter", {
+        method: "POST",
+        body: query,
+        headers: { "Content-Type": "text/plain" },
+        signal: AbortSignal.timeout(25000),
+      });
+      if (!res.ok) { await agentLog(supabase, "Scout", `OSM error ${res.status} for ${trade}`, "info"); continue; }
+      const data = await res.json();
+      const elements: any[] = data.elements ?? [];
 
-      if (searchData.status === "REQUEST_DENIED") {
-        await agentLog(supabase, "Scout", `✗ Google Places blocked: ${searchData.error_message ?? "REQUEST_DENIED"} — enable Places API & billing at console.cloud.google.com`, "error");
-        break; // All trades will fail, no point continuing
+      await agentLog(supabase, "Scout", `OSM: ${elements.length} ${trade} entries in Nottingham`, "info");
+
+      for (const el of elements) {
+        const tags = el.tags ?? {};
+        const name = tags.name ?? tags["name:en"] ?? null;
+        if (!name) continue;
+        const website = tags.website ?? tags.url ?? null;
+        const directEmail = tags.email ?? null;
+        const key = `osm:${el.id}`;
+        await storeLead(key, name, trade, website, directEmail);
       }
-      if (searchData.status === "ZERO_RESULTS") {
-        await agentLog(supabase, "Scout", `No Google results for ${trade} in Nottingham`, "info");
-        continue;
-      }
-      if (searchData.status !== "OK") {
-        await agentLog(supabase, "Scout", `Google Places error for ${trade}: ${searchData.status}`, "error");
-        continue;
-      }
-
-      const places: any[] = (searchData.results ?? []).slice(0, 10);
-      await agentLog(supabase, "Scout", `Google Places: ${places.length} results for ${trade}`, "info");
-
-      // Step 2: Get Place Details for each — to get the website
-      for (const place of places) {
-        try {
-          const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,website&key=${GOOGLE_API_KEY}`;
-          const detailsRes = await fetch(detailsUrl, { signal: AbortSignal.timeout(8000) });
-          const detailsData = await detailsRes.json();
-
-          if (detailsData.status !== "OK") continue;
-
-          const name = detailsData.result?.name ?? place.name ?? "Unknown";
-          const website = detailsData.result?.website ?? null;
-
-          await storeLead(place.place_id, name, trade, website);
-        } catch {}
-      }
-
-      await new Promise(r => setTimeout(r, 500));
     } catch (e: any) {
-      await agentLog(supabase, "Scout", `Places error (${trade}): ${e.message}`, "error");
+      await agentLog(supabase, "Scout", `OSM error (${trade}): ${e.message}`, "error");
     }
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  // ── Source 2: Companies House API ─────────────────────────────────────────
+  // SIC codes for trades — filtered from CH search results
+  const CH_QUERIES = [
+    { trade: "plumber",          q: "plumbing nottingham" },
+    { trade: "electrician",      q: "electrical nottingham" },
+    { trade: "builder",          q: "building construction nottingham" },
+    { trade: "roofer",           q: "roofing nottingham" },
+    { trade: "plasterer",        q: "plastering nottingham" },
+    { trade: "carpenter",        q: "carpentry joinery nottingham" },
+    { trade: "gas engineer",     q: "gas heating nottingham" },
+    { trade: "heating engineer", q: "heating engineer nottingham" },
+  ];
+
+  const TRADE_SICS: Record<string, string[]> = {
+    plumber:           ["43220"],
+    electrician:       ["43210"],
+    builder:           ["41100","41201","41202","43290","43999"],
+    roofer:            ["43910"],
+    plasterer:         ["43300"],
+    carpenter:         ["43320"],
+    "gas engineer":    ["43220","43290"],
+    "heating engineer":["43220","35300"],
+  };
+
+  await agentLog(supabase, "Scout", "🏢 Querying Companies House for registered Nottingham trade businesses...", "info");
+
+  for (const { trade, q } of CH_QUERIES) {
+    try {
+      const res = await fetch(
+        `https://api.company-information.service.gov.uk/search/companies?q=${encodeURIComponent(q)}&items_per_page=20`,
+        { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(10000) }
+      );
+      if (!res.ok) { await agentLog(supabase, "Scout", `CH error ${res.status} for ${trade}`, "info"); continue; }
+      const data = await res.json();
+      const companies: any[] = (data.items ?? []).filter((c: any) =>
+        // Only active companies
+        c.company_status === "active" &&
+        // Registered in Nottingham area
+        /Nottingham|NG\d/i.test(JSON.stringify(c.registered_office_address ?? {}))
+      ).slice(0, 10);
+
+      await agentLog(supabase, "Scout", `CH: ${companies.length} active ${trade} companies in Nottingham`, "info");
+
+      for (const co of companies) {
+        const name = co.title ?? "Unknown";
+        const companyNumber = co.company_number;
+        const key = `ch:${companyNumber}`;
+
+        // Try to guess their website from company name
+        const slug = name
+          .toLowerCase()
+          .replace(/\s+(ltd|limited|plc|llp|lp)\.?$/i, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
+
+        // Try the most common domain patterns
+        let website: string | null = null;
+        for (const tld of [".co.uk", ".com"]) {
+          const candidate = `https://${slug}${tld}`;
+          try {
+            const headRes = await fetch(candidate, { method: "HEAD", signal: AbortSignal.timeout(4000) });
+            if (headRes.ok || headRes.status === 405) { website = candidate; break; }
+          } catch {}
+        }
+
+        await storeLead(key, name, trade, website);
+      }
+    } catch (e: any) {
+      await agentLog(supabase, "Scout", `CH error (${trade}): ${e.message}`, "error");
+    }
+    await new Promise(r => setTimeout(r, 400));
   }
 
   const summary = `Scout done — ${totalFound} leads stored, ${totalWithEmail} with emails ready for Writer`;

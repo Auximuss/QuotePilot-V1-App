@@ -29,16 +29,14 @@ async function sendEmail({ to, subject, text }: { to: string; subject: string; t
   return res.json();
 }
 
-// ── Scout (Google Places API + Hunter.io) ────────────────────────────────────
+// ── Scout (OpenStreetMap + Companies House — fully free, no card) ────────────
 async function runScout(supabase: Supa) {
   const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
-  const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-  if (!HUNTER_API_KEY || !GOOGLE_API_KEY) {
-    await agentLog(supabase, "Scout", "✗ Missing HUNTER_API_KEY or GOOGLE_API_KEY", "error");
+  if (!HUNTER_API_KEY) {
+    await agentLog(supabase, "Scout", "✗ Missing HUNTER_API_KEY", "error");
     return { totalFound: 0, totalWithEmail: 0 };
   }
 
-  const TRADES = ["plumber","electrician","builder","roofer","plasterer","carpenter","gas engineer","heating engineer"];
   let totalFound = 0, totalWithEmail = 0;
 
   async function hunterEmail(website: string): Promise<string | null> {
@@ -53,61 +51,81 @@ async function runScout(supabase: Supa) {
     } catch { return null; }
   }
 
-  await agentLog(supabase, "Scout", `🔍 Searching Google Places for ${TRADES.length} trades in Nottingham...`, "info");
+  async function storeLead(key: string, name: string, trade: string, website: string | null, directEmail?: string | null) {
+    const { data: ex } = await supabase.from("outreach_leads").select("id").ilike("notes", `%${key}%`).limit(1);
+    if (ex?.length) return;
+    const email = directEmail ?? (website ? await hunterEmail(website) : null);
+    const { error } = await supabase.from("outreach_leads").insert({ business_name: name, trade, email, location: "Nottingham", source: "scout", status: email ? "new" : "no_email", notes: key });
+    if (error) { await agentLog(supabase, "Scout", `✗ DB: ${error.message}`, "error"); return; }
+    totalFound++;
+    if (email) { totalWithEmail++; await agentLog(supabase, "Scout", `✓ ${name} — ${email}`, "success", { trade }); }
+    else { await agentLog(supabase, "Scout", `◎ ${name} — ${website ? "no email" : "no website"}`, "info"); }
+    await new Promise(r => setTimeout(r, 300));
+  }
 
-  for (const trade of TRADES) {
+  // OpenStreetMap Overpass API — Nottingham bounding box
+  const OSM_CRAFTS: Record<string, string> = {
+    plumber: "plumber", electrician: "electrician", builder: "builder",
+    roofer: "roofer", plasterer: "plasterer", carpenter: "carpenter",
+    "gas engineer": "hvac_technician", "heating engineer": "hvac_technician",
+  };
+
+  await agentLog(supabase, "Scout", "🗺 Querying OpenStreetMap for Nottingham tradespeople...", "info");
+  for (const [trade, osmTag] of Object.entries(OSM_CRAFTS)) {
     try {
-      const searchRes = await fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(trade + " in Nottingham UK")}&key=${GOOGLE_API_KEY}`,
-        { signal: AbortSignal.timeout(10000) }
-      );
-      const searchData = await searchRes.json();
-
-      if (searchData.status === "REQUEST_DENIED") {
-        await agentLog(supabase, "Scout", `✗ Google Places blocked: ${searchData.error_message ?? "REQUEST_DENIED"} — enable Places API & billing at console.cloud.google.com`, "error");
-        break;
+      const query = `[out:json][timeout:20];(node["craft"="${osmTag}"](52.88,-1.28,53.08,-0.98);way["craft"="${osmTag}"](52.88,-1.28,53.08,-0.98););out body;`;
+      const res = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: query, headers: { "Content-Type": "text/plain" }, signal: AbortSignal.timeout(25000) });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const elements: any[] = data.elements ?? [];
+      await agentLog(supabase, "Scout", `OSM: ${elements.length} ${trade} entries`, "info");
+      for (const el of elements) {
+        const tags = el.tags ?? {};
+        if (!tags.name) continue;
+        await storeLead(`osm:${el.id}`, tags.name, trade, tags.website ?? tags.url ?? null, tags.email ?? null);
       }
-      if (searchData.status !== "OK") {
-        await agentLog(supabase, "Scout", `Google Places ${searchData.status} for ${trade}`, "info");
-        continue;
+    } catch {}
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  // Companies House API — free UK government API
+  const CH_QUERIES = [
+    { trade: "plumber", q: "plumbing nottingham" },
+    { trade: "electrician", q: "electrical nottingham" },
+    { trade: "builder", q: "building construction nottingham" },
+    { trade: "roofer", q: "roofing nottingham" },
+    { trade: "plasterer", q: "plastering nottingham" },
+    { trade: "carpenter", q: "carpentry joinery nottingham" },
+    { trade: "gas engineer", q: "gas heating nottingham" },
+    { trade: "heating engineer", q: "heating engineer nottingham" },
+  ];
+
+  await agentLog(supabase, "Scout", "🏢 Querying Companies House for Nottingham trade companies...", "info");
+  for (const { trade, q } of CH_QUERIES) {
+    try {
+      const res = await fetch(`https://api.company-information.service.gov.uk/search/companies?q=${encodeURIComponent(q)}&items_per_page=20`, { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(10000) });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const companies: any[] = (data.items ?? [])
+        .filter((c: any) => c.company_status === "active" && /Nottingham|NG\d/i.test(JSON.stringify(c.registered_office_address ?? {})))
+        .slice(0, 10);
+      await agentLog(supabase, "Scout", `CH: ${companies.length} active ${trade} companies in Nottingham`, "info");
+      for (const co of companies) {
+        const name = co.title ?? "Unknown";
+        const slug = name.toLowerCase().replace(/\s+(ltd|limited|plc|llp)\.?$/i, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        let website: string | null = null;
+        for (const tld of [".co.uk", ".com"]) {
+          try {
+            const hr = await fetch(`https://${slug}${tld}`, { method: "HEAD", signal: AbortSignal.timeout(4000) });
+            if (hr.ok || hr.status === 405) { website = `https://${slug}${tld}`; break; }
+          } catch {}
+        }
+        await storeLead(`ch:${co.company_number}`, name, trade, website);
       }
-
-      const places: any[] = (searchData.results ?? []).slice(0, 10);
-      await agentLog(supabase, "Scout", `Google Places: ${places.length} results for ${trade}`, "info");
-
-      for (const place of places) {
-        try {
-          const { data: ex } = await supabase.from("outreach_leads").select("id").ilike("notes", `%${place.place_id}%`).limit(1);
-          if (ex?.length) continue;
-
-          const detailsRes = await fetch(
-            `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,website&key=${GOOGLE_API_KEY}`,
-            { signal: AbortSignal.timeout(8000) }
-          );
-          const detailsData = await detailsRes.json();
-          if (detailsData.status !== "OK") continue;
-
-          const name = detailsData.result?.name ?? place.name ?? "Unknown";
-          const website = detailsData.result?.website ?? null;
-          const email = website ? await hunterEmail(website) : null;
-
-          const { error } = await supabase.from("outreach_leads").insert({
-            business_name: name, trade, email, location: "Nottingham", source: "scout",
-            status: email ? "new" : "no_email", notes: `place:${place.place_id}`,
-          });
-
-          if (!error) {
-            totalFound++;
-            if (email) { totalWithEmail++; await agentLog(supabase, "Scout", `✓ ${name} — ${email}`, "success", { trade }); }
-            else { await agentLog(supabase, "Scout", `◎ ${name} — ${website ? "no email" : "no website"}`, "info"); }
-          }
-          await new Promise(r => setTimeout(r, 300));
-        } catch {}
-      }
-      await new Promise(r => setTimeout(r, 500));
     } catch (e: any) {
-      await agentLog(supabase, "Scout", `Places error (${trade}): ${e.message}`, "error");
+      await agentLog(supabase, "Scout", `CH error (${trade}): ${e.message}`, "error");
     }
+    await new Promise(r => setTimeout(r, 400));
   }
 
   await agentLog(supabase, "Scout", `✅ ${totalFound} leads found, ${totalWithEmail} with emails`, "success");
