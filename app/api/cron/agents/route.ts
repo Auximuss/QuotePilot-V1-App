@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import OpenAI from "openai";
 
-// This cron route runs the full agent pipeline daily at 7am UTC.
-// It bypasses user auth (runs as service role) since it's called by Vercel cron.
+// Cron runs the full pipeline daily at 7am UTC — no user auth needed.
 // Protected by CRON_SECRET env var.
 
-async function agentLog(supabase: ReturnType<typeof createServiceClient>, agent: string, message: string, type = "info", metadata?: Record<string, unknown>) {
+export const maxDuration = 300; // 5 min — Scout needs time on Vercel Pro
+
+type Supa = ReturnType<typeof createServiceClient>;
+
+async function agentLog(supabase: Supa, agent: string, message: string, type = "info", metadata?: Record<string, unknown>) {
   await supabase.from("agent_logs").insert({ agent, message, type, metadata });
 }
 
@@ -19,17 +22,92 @@ async function sendEmail({ to, subject, text }: { to: string; subject: string; t
     },
     body: JSON.stringify({
       from: "Alex at Demand Pilot <onboarding@resend.dev>",
-      to,
-      subject,
-      text,
+      to, subject, text,
     }),
   });
   if (!res.ok) throw new Error(`Resend error: ${await res.text()}`);
   return res.json();
 }
 
+// ── Scout (real lead finder) ─────────────────────────────────────────────────
+async function runScout(supabase: Supa) {
+  const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+  const GOOGLE_CSE_ID = process.env.GOOGLE_CSE_ID;
+  const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
+
+  if (!GOOGLE_API_KEY || !GOOGLE_CSE_ID || !HUNTER_API_KEY) {
+    await agentLog(supabase, "Scout", "✗ Missing env vars: GOOGLE_API_KEY, GOOGLE_CSE_ID, HUNTER_API_KEY", "error");
+    return { totalFound: 0, totalWithEmail: 0 };
+  }
+
+  const SKIP = ["checkatrade.com", "yell.com", "mybuilder.com", "ratedpeople.com", "trustatrader.com", "facebook.com", "instagram.com", "twitter.com", "linkedin.com", "google.com", "bark.com", "which.co.uk"];
+
+  const SEARCHES = [
+    { trade: "plumber",          area: "Nottingham" },
+    { trade: "electrician",      area: "Nottingham" },
+    { trade: "builder",          area: "Nottingham" },
+    { trade: "roofer",           area: "Nottingham" },
+    { trade: "plasterer",        area: "Nottingham" },
+    { trade: "carpenter",        area: "Nottingham" },
+    { trade: "gas engineer",     area: "Nottingham" },
+    { trade: "heating engineer", area: "Nottingham" },
+    { trade: "plumber",          area: "Beeston" },
+    { trade: "electrician",      area: "Arnold" },
+    { trade: "builder",          area: "West Bridgford" },
+    { trade: "roofer",           area: "Hucknall" },
+  ];
+
+  let totalFound = 0, totalWithEmail = 0;
+  await agentLog(supabase, "Scout", `🔍 Searching ${SEARCHES.length} queries for Nottingham trades...`, "info");
+
+  for (const { trade, area } of SEARCHES) {
+    try {
+      const q = encodeURIComponent(`${trade} ${area} contact`);
+      const res = await fetch(`https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CSE_ID}&q=${q}&num=10`);
+      if (!res.ok) { await agentLog(supabase, "Scout", `✗ Google error ${res.status}`, "error"); break; }
+      const data = await res.json();
+      if (data.error) { await agentLog(supabase, "Scout", `✗ ${data.error.message}`, "error"); break; }
+
+      for (const item of data.items ?? []) {
+        try {
+          let domain: string;
+          try { domain = new URL(item.link).hostname.replace(/^www\./, ""); } catch { continue; }
+          if (SKIP.some(d => domain.includes(d))) continue;
+
+          const { data: ex } = await supabase.from("outreach_leads").select("id").ilike("notes", `%${domain}%`).limit(1);
+          if (ex?.length) continue;
+
+          const businessName = item.title.split(/\s[-|–·]\s/)[0].replace(/\s+(Ltd|Limited|LTD)\.?$/i, "").trim().substring(0, 80) || domain;
+
+          let email: string | null = null;
+          const hr = await fetch(`https://api.hunter.io/v2/domain-search?domain=${domain}&api_key=${HUNTER_API_KEY}&limit=5`);
+          if (hr.ok) {
+            const hd = await hr.json();
+            const emails: any[] = hd.data?.emails ?? [];
+            email = (emails.find(e => /contact|info|hello|enquir|admin|quote|office/i.test(e.value)) ?? emails[0])?.value ?? null;
+          }
+
+          const AREAS = ["Nottingham", "Beeston", "Arnold", "Hucknall", "Clifton", "West Bridgford", "Bulwell", "Carlton", "Nottinghamshire"];
+          const location = AREAS.find(a => `${item.snippet ?? ""} ${item.title}`.includes(a)) ?? area;
+
+          await supabase.from("outreach_leads").insert({ business_name: businessName, trade, email, location, source: "scout", status: email ? "new" : "no_email", notes: item.link });
+          totalFound++;
+          if (email) { totalWithEmail++; await agentLog(supabase, "Scout", `✓ ${businessName} — ${email}`, "success", { domain, trade }); }
+          else { await agentLog(supabase, "Scout", `◎ ${businessName} (${domain}) — no email`, "info"); }
+          await new Promise(r => setTimeout(r, 250));
+        } catch {}
+      }
+      await new Promise(r => setTimeout(r, 300));
+    } catch (e: any) {
+      await agentLog(supabase, "Scout", `✗ ${trade} ${area}: ${e.message}`, "error");
+    }
+  }
+
+  await agentLog(supabase, "Scout", `✅ ${totalFound} leads found, ${totalWithEmail} with emails`, "success");
+  return { totalFound, totalWithEmail };
+}
+
 export async function GET(req: Request) {
-  // Verify this is actually from Vercel cron
   const authHeader = req.headers.get("authorization");
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -39,11 +117,8 @@ export async function GET(req: Request) {
   await agentLog(supabase, "Pipeline", "⏰ Cron triggered — starting daily pipeline", "info");
 
   try {
-    // ── Scout: generate search queries ──────────────────────────────────────
-    const trades = ["plumber", "electrician", "builder", "roofer", "plasterer", "carpenter", "gas engineer", "heating engineer"];
-    const areas = ["Nottingham", "Beeston", "Arnold", "Hucknall", "Clifton", "West Bridgford", "Bulwell", "Carlton"];
-    const queries = trades.flatMap(t => areas.slice(0, 3).map(a => `"${t} ${a}" site:checkatrade.com OR site:mybuilder.com`));
-    await agentLog(supabase, "Scout", `✓ Generated ${queries.length} search queries`, "success", { queries: queries.slice(0, 10) });
+    // ── Scout ───────────────────────────────────────────────────────────────
+    const { totalFound, totalWithEmail } = await runScout(supabase);
 
     // ── Writer: write emails for new leads ──────────────────────────────────
     const { data: newLeads } = await supabase.from("outreach_leads").select("*").eq("status", "new");
@@ -125,7 +200,7 @@ Return ONLY the email body, nothing else.`
       `Conversion rate: ${total ? Math.round((byStatus("signed_up") / total) * 100) : 0}%`,
       `Reply rate:      ${byStatus("email_sent") ? Math.round((byStatus("replied") / byStatus("email_sent")) * 100) : 0}%`,
       ``,
-      `Tonight's run: Writer processed ${writerCount} leads, Sender delivered ${senderCount} emails.`,
+      `Tonight's run: Scout found ${totalFound} leads (${totalWithEmail} with emails), Writer processed ${writerCount}, Sender delivered ${senderCount}.`,
     ].join("\n");
 
     await sendEmail({

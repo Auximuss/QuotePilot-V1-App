@@ -3,6 +3,8 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
 import OpenAI from "openai";
 
+export const maxDuration = 60; // Vercel Pro — Scout needs time to search + call Hunter
+
 async function sendEmail({ to, subject, text }: { to: string; subject: string; text: string }) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -28,18 +30,133 @@ async function agentLog(supabase: SupabaseClient, agent: string, message: string
 }
 
 // ── Scout Agent ───────────────────────────────────────────────────────────────
-// Generates suggested search queries for finding leads — human adds them manually
+// Searches Google for real UK tradespeople, finds their emails via Hunter.io,
+// stores them as leads ready for Writer to process.
 async function runScout(supabase: SupabaseClient) {
-  await agentLog(supabase, "Scout", "🔍 Generating lead search queries for Nottingham tradespeople...", "info");
+  const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+  const GOOGLE_CSE_ID = process.env.GOOGLE_CSE_ID;
+  const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
 
-  const trades = ["plumber", "electrician", "builder", "roofer", "plasterer", "carpenter", "gas engineer", "heating engineer"];
-  const areas = ["Nottingham", "Beeston", "Arnold", "Hucknall", "Clifton", "West Bridgford", "Bulwell", "Carlton"];
+  if (!GOOGLE_API_KEY || !GOOGLE_CSE_ID || !HUNTER_API_KEY) {
+    await agentLog(supabase, "Scout", "✗ Missing env vars — add GOOGLE_API_KEY, GOOGLE_CSE_ID, HUNTER_API_KEY in Vercel", "error");
+    return { message: "Missing API keys" };
+  }
 
-  const queries = trades.flatMap(t => areas.slice(0, 3).map(a => `"${t} ${a}" site:checkatrade.com OR site:mybuilder.com`));
+  const SKIP_DOMAINS = ["checkatrade.com", "yell.com", "mybuilder.com", "ratedpeople.com", "trustatrader.com", "facebook.com", "instagram.com", "twitter.com", "linkedin.com", "google.com", "bing.com", "bark.com", "rated.com", "which.co.uk"];
 
-  await agentLog(supabase, "Scout", `✓ Generated ${queries.length} search queries. Copy these into Google to find leads.`, "success", { queries: queries.slice(0, 10) });
+  const SEARCHES = [
+    { trade: "plumber",          area: "Nottingham" },
+    { trade: "electrician",      area: "Nottingham" },
+    { trade: "builder",          area: "Nottingham" },
+    { trade: "roofer",           area: "Nottingham" },
+    { trade: "plasterer",        area: "Nottingham" },
+    { trade: "carpenter",        area: "Nottingham" },
+    { trade: "gas engineer",     area: "Nottingham" },
+    { trade: "plumber",          area: "Beeston" },
+    { trade: "electrician",      area: "Arnold" },
+    { trade: "builder",          area: "West Bridgford" },
+    { trade: "roofer",           area: "Hucknall" },
+    { trade: "heating engineer", area: "Nottingham" },
+  ];
 
-  return { queries: queries.slice(0, 10), message: `Scout generated ${queries.length} search queries` };
+  let totalFound = 0;
+  let totalWithEmail = 0;
+
+  await agentLog(supabase, "Scout", `🔍 Searching for Nottingham tradespeople across ${SEARCHES.length} queries...`, "info");
+
+  for (const { trade, area } of SEARCHES) {
+    try {
+      const query = `${trade} ${area} contact`;
+      const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CSE_ID}&q=${encodeURIComponent(query)}&num=10`;
+
+      const googleRes = await fetch(googleUrl);
+      if (!googleRes.ok) {
+        const errText = await googleRes.text();
+        await agentLog(supabase, "Scout", `✗ Google API error (${googleRes.status}) — ${errText.slice(0, 120)}`, "error");
+        break;
+      }
+
+      const googleData = await googleRes.json();
+      if (googleData.error) {
+        await agentLog(supabase, "Scout", `✗ Google: ${googleData.error.message}`, "error");
+        break;
+      }
+
+      const items: any[] = googleData.items ?? [];
+
+      for (const item of items) {
+        try {
+          // Parse domain
+          let domain: string;
+          try { domain = new URL(item.link).hostname.replace(/^www\./, ""); } catch { continue; }
+
+          // Skip directories & social
+          if (SKIP_DOMAINS.some(d => domain.includes(d))) continue;
+
+          // Skip already found
+          const { data: existing } = await supabase
+            .from("outreach_leads").select("id").ilike("notes", `%${domain}%`).limit(1);
+          if (existing?.length) continue;
+
+          // Clean business name
+          const businessName = item.title
+            .split(/\s[-|–·|]\s/)[0]
+            .replace(/\s+(Ltd|Limited|LTD|plc|PLC)\.?$/i, "")
+            .trim()
+            .substring(0, 80) || domain;
+
+          // Hunter.io — find email for this domain
+          let email: string | null = null;
+          const hunterRes = await fetch(
+            `https://api.hunter.io/v2/domain-search?domain=${domain}&api_key=${HUNTER_API_KEY}&limit=5`
+          );
+          if (hunterRes.ok) {
+            const hunterData = await hunterRes.json();
+            const emails: any[] = hunterData.data?.emails ?? [];
+            const best = emails.find(e =>
+              /contact|info|hello|enquir|admin|quote|office/i.test(e.value)
+            ) ?? emails[0];
+            email = best?.value ?? null;
+          }
+
+          // Detect location from snippet
+          const AREAS = ["Nottingham", "Beeston", "Arnold", "Hucknall", "Clifton", "West Bridgford", "Bulwell", "Carlton", "Nottinghamshire"];
+          const detectedArea = AREAS.find(a => `${item.snippet ?? ""} ${item.title}`.includes(a)) ?? area;
+
+          await supabase.from("outreach_leads").insert({
+            business_name: businessName,
+            trade,
+            email,
+            location: detectedArea,
+            phone: null,
+            source: "scout",
+            status: email ? "new" : "no_email",
+            notes: item.link,
+          });
+
+          totalFound++;
+          if (email) {
+            totalWithEmail++;
+            await agentLog(supabase, "Scout", `✓ ${businessName} — ${email}`, "success", { domain, trade });
+          } else {
+            await agentLog(supabase, "Scout", `◎ ${businessName} (${domain}) — no email found`, "info");
+          }
+
+          await new Promise(r => setTimeout(r, 250));
+        } catch (e: any) {
+          await agentLog(supabase, "Scout", `✗ Result error: ${e.message}`, "error");
+        }
+      }
+
+      await new Promise(r => setTimeout(r, 300));
+    } catch (e: any) {
+      await agentLog(supabase, "Scout", `✗ Search error (${trade} ${area}): ${e.message}`, "error");
+    }
+  }
+
+  const summary = `✅ Scout done — ${totalFound} leads found, ${totalWithEmail} with emails ready for Writer`;
+  await agentLog(supabase, "Scout", summary, "success");
+  return { message: summary, totalFound, totalWithEmail };
 }
 
 // ── Writer Agent ──────────────────────────────────────────────────────────────
