@@ -29,20 +29,14 @@ async function sendEmail({ to, subject, text }: { to: string; subject: string; t
   return res.json();
 }
 
-// ── Scout (multi-source: FreeIndex → Scoot → Hotfrog) ───────────────────────
+// ── Scout (Google Places API + Hunter.io) ────────────────────────────────────
 async function runScout(supabase: Supa) {
   const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
-  if (!HUNTER_API_KEY) {
-    await agentLog(supabase, "Scout", "✗ Missing HUNTER_API_KEY", "error");
+  const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+  if (!HUNTER_API_KEY || !GOOGLE_API_KEY) {
+    await agentLog(supabase, "Scout", "✗ Missing HUNTER_API_KEY or GOOGLE_API_KEY", "error");
     return { totalFound: 0, totalWithEmail: 0 };
   }
-
-  const HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-GB,en;q=0.9",
-    "Cache-Control": "no-cache",
-  };
 
   const TRADES = ["plumber","electrician","builder","roofer","plasterer","carpenter","gas engineer","heating engineer"];
   let totalFound = 0, totalWithEmail = 0;
@@ -59,91 +53,61 @@ async function runScout(supabase: Supa) {
     } catch { return null; }
   }
 
-  async function storeLead(name: string, trade: string, website: string | null, sourceUrl: string) {
-    const { data: ex } = await supabase.from("outreach_leads").select("id").ilike("notes", `%${sourceUrl}%`).limit(1);
-    if (ex?.length) return;
-    const email = website ? await hunterEmail(website) : null;
-    const { error } = await supabase.from("outreach_leads").insert({ business_name: name, trade, email, location: "Nottingham", source: "scout", status: email ? "new" : "no_email", notes: sourceUrl });
-    if (error) { await agentLog(supabase, "Scout", `✗ DB: ${error.message}`, "error"); return; }
-    totalFound++;
-    if (email) { totalWithEmail++; await agentLog(supabase, "Scout", `✓ ${name} — ${email}`, "success", { trade }); }
-    else { await agentLog(supabase, "Scout", `◎ ${name} — ${website ? "no email" : "no website"}`, "info"); }
-    await new Promise(r => setTimeout(r, 400));
-  }
+  await agentLog(supabase, "Scout", `🔍 Searching Google Places for ${TRADES.length} trades in Nottingham...`, "info");
 
-  async function scrapeFreeIndex(trade: string): Promise<boolean> {
-    try {
-      const url = `https://www.freeindex.co.uk/search.htm?q=${encodeURIComponent(trade)}&locality=Nottingham`;
-      const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(10000) });
-      if (!res.ok) return false;
-      const html = await res.text();
-      const paths = [...new Set([...html.matchAll(/href="(\/profile\([0-9]+\)\/[^"?#]+)"/g)].map(m => m[1]))].slice(0, 8);
-      if (!paths.length) return false;
-      await agentLog(supabase, "Scout", `FreeIndex: ${paths.length} for ${trade}`, "info");
-      for (const path of paths) {
-        try {
-          const pr = await fetch(`https://www.freeindex.co.uk${path}`, { headers: HEADERS, signal: AbortSignal.timeout(8000) });
-          if (!pr.ok) continue;
-          const ph = await pr.text();
-          const name = (ph.match(/<h1[^>]*>([^<]{2,80})<\/h1>/i) ?? ph.match(/"name"\s*:\s*"([^"]{2,80})"/))?.[1]?.trim().replace(/\s+(Ltd|Limited)\.?$/i, "") ?? "Unknown";
-          const website = (ph.match(/href="(https?:\/\/(?!(?:www\.)?freeindex)[^"]{8,})"[^>]*rel="nofollow"/i))?.[1]?.split("?")[0] ?? null;
-          await storeLead(name, trade, website, `https://www.freeindex.co.uk${path}`);
-        } catch {}
-      }
-      return true;
-    } catch { return false; }
-  }
-
-  async function scrapeScoot(trade: string): Promise<boolean> {
-    try {
-      const url = `https://www.scoot.co.uk/find/${encodeURIComponent(trade.replace(/ /g, "-"))}/in-Nottingham`;
-      const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(10000) });
-      if (!res.ok) return false;
-      const html = await res.text();
-      const paths = [...new Set([...html.matchAll(/href="(\/gb\/[^"?#]{5,})"/g)].map(m => m[1]).filter(p => p.split("/").length > 3))].slice(0, 8);
-      if (!paths.length) return false;
-      await agentLog(supabase, "Scout", `Scoot: ${paths.length} for ${trade}`, "info");
-      for (const path of paths) {
-        try {
-          const pr = await fetch(`https://www.scoot.co.uk${path}`, { headers: HEADERS, signal: AbortSignal.timeout(8000) });
-          if (!pr.ok) continue;
-          const ph = await pr.text();
-          const name = ph.match(/<h1[^>]*>([^<]{2,80})<\/h1>/i)?.[1]?.trim().replace(/\s+(Ltd|Limited)\.?$/i, "") ?? "Unknown";
-          const website = ph.match(/href="(https?:\/\/(?!(?:www\.)?scoot)[^"]{8,})"[^>]*rel="nofollow"/i)?.[1]?.split("?")[0] ?? null;
-          await storeLead(name, trade, website, `https://www.scoot.co.uk${path}`);
-        } catch {}
-      }
-      return true;
-    } catch { return false; }
-  }
-
-  async function scrapeHotfrog(trade: string): Promise<boolean> {
-    try {
-      const url = `https://www.hotfrog.co.uk/search/nottingham/${encodeURIComponent(trade.replace(/ /g, "+"))}`;
-      const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(10000) });
-      if (!res.ok) return false;
-      const html = await res.text();
-      const paths = [...new Set([...html.matchAll(/href="(\/[a-z0-9-]+\/[a-z0-9-]+\/[a-z0-9-]{8,}\/?)"/g)].map(m => m[1]).filter(p => !p.includes("search") && !p.includes("category")))].slice(0, 8);
-      if (!paths.length) return false;
-      await agentLog(supabase, "Scout", `Hotfrog: ${paths.length} for ${trade}`, "info");
-      for (const path of paths) {
-        try {
-          const pr = await fetch(`https://www.hotfrog.co.uk${path}`, { headers: HEADERS, signal: AbortSignal.timeout(8000) });
-          if (!pr.ok) continue;
-          const ph = await pr.text();
-          const name = ph.match(/<h1[^>]*>([^<]{2,80})<\/h1>/i)?.[1]?.trim().replace(/\s+(Ltd|Limited)\.?$/i, "") ?? "Unknown";
-          const website = ph.match(/href="(https?:\/\/(?!(?:www\.)?hotfrog)[^"]{8,})"[^>]*rel="nofollow"/i)?.[1]?.split("?")[0] ?? null;
-          await storeLead(name, trade, website, `https://www.hotfrog.co.uk${path}`);
-        } catch {}
-      }
-      return true;
-    } catch { return false; }
-  }
-
-  await agentLog(supabase, "Scout", `🔍 Trying FreeIndex → Scoot → Hotfrog for ${TRADES.length} trades...`, "info");
   for (const trade of TRADES) {
-    await scrapeFreeIndex(trade) || await scrapeScoot(trade) || await scrapeHotfrog(trade);
-    await new Promise(r => setTimeout(r, 500));
+    try {
+      const searchRes = await fetch(
+        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(trade + " in Nottingham UK")}&key=${GOOGLE_API_KEY}`,
+        { signal: AbortSignal.timeout(10000) }
+      );
+      const searchData = await searchRes.json();
+
+      if (searchData.status === "REQUEST_DENIED") {
+        await agentLog(supabase, "Scout", `✗ Google Places blocked: ${searchData.error_message ?? "REQUEST_DENIED"} — enable Places API & billing at console.cloud.google.com`, "error");
+        break;
+      }
+      if (searchData.status !== "OK") {
+        await agentLog(supabase, "Scout", `Google Places ${searchData.status} for ${trade}`, "info");
+        continue;
+      }
+
+      const places: any[] = (searchData.results ?? []).slice(0, 10);
+      await agentLog(supabase, "Scout", `Google Places: ${places.length} results for ${trade}`, "info");
+
+      for (const place of places) {
+        try {
+          const { data: ex } = await supabase.from("outreach_leads").select("id").ilike("notes", `%${place.place_id}%`).limit(1);
+          if (ex?.length) continue;
+
+          const detailsRes = await fetch(
+            `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,website&key=${GOOGLE_API_KEY}`,
+            { signal: AbortSignal.timeout(8000) }
+          );
+          const detailsData = await detailsRes.json();
+          if (detailsData.status !== "OK") continue;
+
+          const name = detailsData.result?.name ?? place.name ?? "Unknown";
+          const website = detailsData.result?.website ?? null;
+          const email = website ? await hunterEmail(website) : null;
+
+          const { error } = await supabase.from("outreach_leads").insert({
+            business_name: name, trade, email, location: "Nottingham", source: "scout",
+            status: email ? "new" : "no_email", notes: `place:${place.place_id}`,
+          });
+
+          if (!error) {
+            totalFound++;
+            if (email) { totalWithEmail++; await agentLog(supabase, "Scout", `✓ ${name} — ${email}`, "success", { trade }); }
+            else { await agentLog(supabase, "Scout", `◎ ${name} — ${website ? "no email" : "no website"}`, "info"); }
+          }
+          await new Promise(r => setTimeout(r, 300));
+        } catch {}
+      }
+      await new Promise(r => setTimeout(r, 500));
+    } catch (e: any) {
+      await agentLog(supabase, "Scout", `Places error (${trade}): ${e.message}`, "error");
+    }
   }
 
   await agentLog(supabase, "Scout", `✅ ${totalFound} leads found, ${totalWithEmail} with emails`, "success");

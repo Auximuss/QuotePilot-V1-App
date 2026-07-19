@@ -28,21 +28,21 @@ async function agentLog(supabase: SupabaseClient, agent: string, message: string
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────
-// Tries multiple UK directories in order until one yields results.
-// Each source is an older server-rendered PHP site (not JS-heavy like Checkatrade/Yell).
+// Uses Google Places API (Text Search + Place Details) — a proper API that
+// works from Vercel, never blocks, returns real UK business data.
+// Then uses Hunter.io to find email addresses from business websites.
 async function runScout(supabase: SupabaseClient) {
   const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
+  const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+
   if (!HUNTER_API_KEY) {
     await agentLog(supabase, "Scout", "✗ Missing HUNTER_API_KEY env var", "error");
     return { message: "Missing Hunter API key" };
   }
-
-  const HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-GB,en;q=0.9",
-    "Cache-Control": "no-cache",
-  };
+  if (!GOOGLE_API_KEY) {
+    await agentLog(supabase, "Scout", "✗ Missing GOOGLE_API_KEY env var", "error");
+    return { message: "Missing Google API key" };
+  }
 
   const TRADES = [
     "plumber", "electrician", "builder", "roofer",
@@ -52,7 +52,7 @@ async function runScout(supabase: SupabaseClient) {
   let totalFound = 0;
   let totalWithEmail = 0;
 
-  // ── Helper: find email via Hunter ──────────────────────────────────────────
+  // ── Hunter email lookup ────────────────────────────────────────────────────
   async function hunterEmail(website: string): Promise<string | null> {
     try {
       const domain = new URL(website).hostname.replace(/^www\./, "");
@@ -70,11 +70,11 @@ async function runScout(supabase: SupabaseClient) {
     } catch { return null; }
   }
 
-  // ── Helper: store a lead ───────────────────────────────────────────────────
-  async function storeLead(name: string, trade: string, website: string | null, sourceUrl: string) {
+  // ── Store a lead ───────────────────────────────────────────────────────────
+  async function storeLead(placeId: string, name: string, trade: string, website: string | null) {
     const { data: existing } = await supabase
-      .from("outreach_leads").select("id").ilike("notes", `%${sourceUrl}%`).limit(1);
-    if (existing?.length) return; // already stored
+      .from("outreach_leads").select("id").ilike("notes", `%${placeId}%`).limit(1);
+    if (existing?.length) return;
 
     const email = website ? await hunterEmail(website) : null;
 
@@ -85,7 +85,7 @@ async function runScout(supabase: SupabaseClient) {
       location: "Nottingham",
       source: "scout",
       status: email ? "new" : "no_email",
-      notes: sourceUrl,
+      notes: `https://maps.google.com/?cid=${placeId}`,
     });
 
     if (error) {
@@ -98,160 +98,56 @@ async function runScout(supabase: SupabaseClient) {
       totalWithEmail++;
       await agentLog(supabase, "Scout", `✓ ${name} — ${email}`, "success", { website, trade });
     } else {
-      await agentLog(supabase, "Scout", `◎ ${name} — ${website ? "no email on Hunter" : "no website found"}`, "info");
+      await agentLog(supabase, "Scout", `◎ ${name} — ${website ? "no email on Hunter" : "no website on Google"}`, "info");
     }
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, 300));
   }
 
-  // ── Source 1: FreeIndex ────────────────────────────────────────────────────
-  async function scrapeFreeIndex(trade: string): Promise<boolean> {
-    try {
-      const url = `https://www.freeindex.co.uk/search.htm?q=${encodeURIComponent(trade)}&locality=Nottingham`;
-      const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(10000) });
-      if (!res.ok) {
-        await agentLog(supabase, "Scout", `FreeIndex ${res.status} for ${trade}`, "info");
-        return false;
-      }
-      const html = await res.text();
-
-      // FreeIndex profile links: /profile(number)/slug/
-      const matches = [...html.matchAll(/href="(\/profile\([0-9]+\)\/[^"?#]+)"/g)];
-      const paths = [...new Set(matches.map(m => m[1]))].slice(0, 8);
-
-      if (!paths.length) {
-        await agentLog(supabase, "Scout", `FreeIndex: no profiles for ${trade} — ${html.slice(0, 100).replace(/\s+/g, " ")}`, "info");
-        return false;
-      }
-
-      await agentLog(supabase, "Scout", `FreeIndex: ${paths.length} profiles for ${trade}`, "info");
-
-      for (const path of paths) {
-        const profileUrl = `https://www.freeindex.co.uk${path}`;
-        try {
-          const pr = await fetch(profileUrl, { headers: HEADERS, signal: AbortSignal.timeout(8000) });
-          if (!pr.ok) continue;
-          const ph = await pr.text();
-
-          const nameMatch = ph.match(/<h1[^>]*>([^<]{2,80})<\/h1>/i) ?? ph.match(/"name"\s*:\s*"([^"]{2,80})"/);
-          const name = nameMatch?.[1]?.trim().replace(/\s+(Ltd|Limited)\.?$/i, "") ?? path.split("/").pop() ?? "Unknown";
-
-          const webMatch =
-            ph.match(/href="(https?:\/\/(?!(?:www\.)?freeindex)[^"]{8,})"[^>]*(?:rel="nofollow"|class="[^"]*website)/i) ??
-            ph.match(/<a[^>]+href="(https?:\/\/(?!(?:www\.)?freeindex)[^"]{8,})"[^>]*>(?:[^<]*)?[Ww]ebsite/i);
-          const website = webMatch?.[1]?.split("?")[0] ?? null;
-
-          await storeLead(name, trade, website, profileUrl);
-        } catch {}
-      }
-      return true;
-    } catch (e: any) {
-      await agentLog(supabase, "Scout", `FreeIndex error (${trade}): ${e.message}`, "error");
-      return false;
-    }
-  }
-
-  // ── Source 2: Scoot ────────────────────────────────────────────────────────
-  async function scrapeScoot(trade: string): Promise<boolean> {
-    try {
-      const url = `https://www.scoot.co.uk/find/${encodeURIComponent(trade.replace(/ /g, "-"))}/in-Nottingham`;
-      const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(10000) });
-      if (!res.ok) {
-        await agentLog(supabase, "Scout", `Scoot ${res.status} for ${trade}`, "info");
-        return false;
-      }
-      const html = await res.text();
-
-      // Scoot business links: /find/{business-slug}/
-      const matches = [...html.matchAll(/href="(\/gb\/[^"?#]{5,})"/g)];
-      const paths = [...new Set(matches.map(m => m[1]).filter(p => p.split("/").length > 3))].slice(0, 8);
-
-      if (!paths.length) {
-        await agentLog(supabase, "Scout", `Scoot: no profiles for ${trade} — ${html.slice(0, 100).replace(/\s+/g, " ")}`, "info");
-        return false;
-      }
-
-      await agentLog(supabase, "Scout", `Scoot: ${paths.length} profiles for ${trade}`, "info");
-
-      for (const path of paths) {
-        const profileUrl = `https://www.scoot.co.uk${path}`;
-        try {
-          const pr = await fetch(profileUrl, { headers: HEADERS, signal: AbortSignal.timeout(8000) });
-          if (!pr.ok) continue;
-          const ph = await pr.text();
-
-          const nameMatch = ph.match(/<h1[^>]*>([^<]{2,80})<\/h1>/i);
-          const name = nameMatch?.[1]?.trim().replace(/\s+(Ltd|Limited)\.?$/i, "") ?? "Unknown";
-
-          const webMatch = ph.match(/href="(https?:\/\/(?!(?:www\.)?scoot)[^"]{8,})"[^>]*rel="nofollow"/i);
-          const website = webMatch?.[1]?.split("?")[0] ?? null;
-
-          await storeLead(name, trade, website, profileUrl);
-        } catch {}
-      }
-      return true;
-    } catch (e: any) {
-      await agentLog(supabase, "Scout", `Scoot error (${trade}): ${e.message}`, "error");
-      return false;
-    }
-  }
-
-  // ── Source 3: Hotfrog ──────────────────────────────────────────────────────
-  async function scrapeHotfrog(trade: string): Promise<boolean> {
-    try {
-      const url = `https://www.hotfrog.co.uk/search/nottingham/${encodeURIComponent(trade.replace(/ /g, "+"))}`;
-      const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(10000) });
-      if (!res.ok) {
-        await agentLog(supabase, "Scout", `Hotfrog ${res.status} for ${trade}`, "info");
-        return false;
-      }
-      const html = await res.text();
-
-      const matches = [...html.matchAll(/href="(\/[a-z0-9-]+\/[a-z0-9-]+\/[a-z0-9-]{8,}\/?)"/g)];
-      const paths = [...new Set(matches.map(m => m[1]).filter(p => !p.includes("search") && !p.includes("category")))].slice(0, 8);
-
-      if (!paths.length) {
-        await agentLog(supabase, "Scout", `Hotfrog: no profiles for ${trade} — ${html.slice(0, 100).replace(/\s+/g, " ")}`, "info");
-        return false;
-      }
-
-      await agentLog(supabase, "Scout", `Hotfrog: ${paths.length} profiles for ${trade}`, "info");
-
-      for (const path of paths) {
-        const profileUrl = `https://www.hotfrog.co.uk${path}`;
-        try {
-          const pr = await fetch(profileUrl, { headers: HEADERS, signal: AbortSignal.timeout(8000) });
-          if (!pr.ok) continue;
-          const ph = await pr.text();
-
-          const nameMatch = ph.match(/<h1[^>]*>([^<]{2,80})<\/h1>/i);
-          const name = nameMatch?.[1]?.trim().replace(/\s+(Ltd|Limited)\.?$/i, "") ?? "Unknown";
-
-          const webMatch = ph.match(/href="(https?:\/\/(?!(?:www\.)?hotfrog)[^"]{8,})"[^>]*(?:rel="nofollow"|class="[^"]*website)/i);
-          const website = webMatch?.[1]?.split("?")[0] ?? null;
-
-          await storeLead(name, trade, website, profileUrl);
-        } catch {}
-      }
-      return true;
-    } catch (e: any) {
-      await agentLog(supabase, "Scout", `Hotfrog error (${trade}): ${e.message}`, "error");
-      return false;
-    }
-  }
-
-  // ── Main: try each source per trade ───────────────────────────────────────
-  await agentLog(supabase, "Scout", `🔍 Searching UK directories for ${TRADES.length} trades (FreeIndex → Scoot → Hotfrog)...`, "info");
+  await agentLog(supabase, "Scout", `🔍 Searching Google Places for ${TRADES.length} trades in Nottingham...`, "info");
 
   for (const trade of TRADES) {
-    const found =
-      await scrapeFreeIndex(trade) ||
-      await scrapeScoot(trade) ||
-      await scrapeHotfrog(trade);
+    try {
+      // Step 1: Text Search — find businesses matching this trade in Nottingham
+      const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(trade + " in Nottingham UK")}&key=${GOOGLE_API_KEY}`;
+      const searchRes = await fetch(searchUrl, { signal: AbortSignal.timeout(10000) });
+      const searchData = await searchRes.json();
 
-    if (!found) {
-      await agentLog(supabase, "Scout", `⚠ All sources blocked/empty for ${trade}`, "error");
+      if (searchData.status === "REQUEST_DENIED") {
+        await agentLog(supabase, "Scout", `✗ Google Places blocked: ${searchData.error_message ?? "REQUEST_DENIED"} — enable Places API & billing at console.cloud.google.com`, "error");
+        break; // All trades will fail, no point continuing
+      }
+      if (searchData.status === "ZERO_RESULTS") {
+        await agentLog(supabase, "Scout", `No Google results for ${trade} in Nottingham`, "info");
+        continue;
+      }
+      if (searchData.status !== "OK") {
+        await agentLog(supabase, "Scout", `Google Places error for ${trade}: ${searchData.status}`, "error");
+        continue;
+      }
+
+      const places: any[] = (searchData.results ?? []).slice(0, 10);
+      await agentLog(supabase, "Scout", `Google Places: ${places.length} results for ${trade}`, "info");
+
+      // Step 2: Get Place Details for each — to get the website
+      for (const place of places) {
+        try {
+          const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,website&key=${GOOGLE_API_KEY}`;
+          const detailsRes = await fetch(detailsUrl, { signal: AbortSignal.timeout(8000) });
+          const detailsData = await detailsRes.json();
+
+          if (detailsData.status !== "OK") continue;
+
+          const name = detailsData.result?.name ?? place.name ?? "Unknown";
+          const website = detailsData.result?.website ?? null;
+
+          await storeLead(place.place_id, name, trade, website);
+        } catch {}
+      }
+
+      await new Promise(r => setTimeout(r, 500));
+    } catch (e: any) {
+      await agentLog(supabase, "Scout", `Places error (${trade}): ${e.message}`, "error");
     }
-    await new Promise(r => setTimeout(r, 500));
   }
 
   const summary = `Scout done — ${totalFound} leads stored, ${totalWithEmail} with emails ready for Writer`;
