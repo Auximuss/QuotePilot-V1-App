@@ -28,11 +28,8 @@ async function agentLog(supabase: SupabaseClient, agent: string, message: string
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────
-// Searches Checkatrade directly (no Google API needed):
-// 1. Hits Checkatrade search for each trade in Nottingham
-// 2. Extracts trader profile URLs from the HTML
-// 3. Fetches each profile to find their own website
-// 4. Hunter.io on their website to get email
+// Scrapes Yell.com (server-rendered) for Nottingham tradespeople,
+// then uses Hunter.io to find their email addresses.
 async function runScout(supabase: SupabaseClient) {
   const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
   if (!HUNTER_API_KEY) {
@@ -43,132 +40,141 @@ async function runScout(supabase: SupabaseClient) {
   const HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-GB,en;q=0.5",
+    "Accept-Language": "en-GB,en;q=0.9",
   };
 
-  const TRADES = [
-    { trade: "plumber",          query: "plumber" },
-    { trade: "electrician",      query: "electrician" },
-    { trade: "builder",          query: "builder" },
-    { trade: "roofer",           query: "roofer" },
-    { trade: "plasterer",        query: "plasterer" },
-    { trade: "carpenter",        query: "carpenter" },
-    { trade: "gas engineer",     query: "gas-engineer" },
-    { trade: "heating engineer", query: "heating-engineer" },
+  // Yell.com uses slug URLs: /s/{trade}-{location}.html
+  const SEARCHES = [
+    { trade: "plumber",          slug: "plumber-nottingham" },
+    { trade: "electrician",      slug: "electrician-nottingham" },
+    { trade: "builder",          slug: "builder-nottingham" },
+    { trade: "roofer",           slug: "roofer-nottingham" },
+    { trade: "plasterer",        slug: "plasterer-nottingham" },
+    { trade: "carpenter",        slug: "carpenter-nottingham" },
+    { trade: "gas engineer",     slug: "gas-engineer-nottingham" },
+    { trade: "heating engineer", slug: "heating-engineer-nottingham" },
+    { trade: "plumber",          slug: "plumber-beeston-nottingham" },
+    { trade: "electrician",      slug: "electrician-arnold-nottingham" },
   ];
-
-  const LOCATIONS = ["Nottingham", "NG1", "NG2", "NG3", "NG5", "NG7", "NG8", "NG9"];
 
   let totalFound = 0;
   let totalWithEmail = 0;
 
-  await agentLog(supabase, "Scout", `🔍 Searching Checkatrade directly for ${TRADES.length} trades in Nottingham...`, "info");
+  await agentLog(supabase, "Scout", `🔍 Searching Yell.com for ${SEARCHES.length} trades in Nottingham...`, "info");
 
-  for (const { trade, query } of TRADES) {
-    for (const location of LOCATIONS.slice(0, 3)) {
-      try {
-        // Checkatrade search URL
-        const searchUrl = `https://www.checkatrade.com/search?tradeName=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`;
+  for (const { trade, slug } of SEARCHES) {
+    try {
+      const searchUrl = `https://www.yell.com/s/${slug}.html`;
+      const searchRes = await fetch(searchUrl, {
+        headers: HEADERS,
+        signal: AbortSignal.timeout(10000),
+      });
 
-        const searchRes = await fetch(searchUrl, {
-          headers: HEADERS,
-          signal: AbortSignal.timeout(8000),
-        });
-
-        if (!searchRes.ok) {
-          await agentLog(supabase, "Scout", `Checkatrade returned ${searchRes.status} for ${trade} in ${location}`, "info");
-          continue;
-        }
-
-        const html = await searchRes.text();
-
-        // Extract trader profile URLs from search results
-        const profileMatches = [...html.matchAll(/href="(\/trades\/[A-Za-z0-9_-]+)"/g)];
-        const profilePaths = [...new Set(profileMatches.map(m => m[1]))].slice(0, 5);
-
-        if (!profilePaths.length) {
-          await agentLog(supabase, "Scout", `No profiles found for ${trade} in ${location} — Checkatrade may be JS-rendered`, "info");
-          continue;
-        }
-
-        await agentLog(supabase, "Scout", `Found ${profilePaths.length} profiles for ${trade} in ${location}`, "info");
-
-        for (const profilePath of profilePaths) {
-          const profileUrl = `https://www.checkatrade.com${profilePath}`;
-          try {
-            // Skip already stored
-            const { data: existing } = await supabase
-              .from("outreach_leads").select("id").ilike("notes", `%${profilePath}%`).limit(1);
-            if (existing?.length) continue;
-
-            // Fetch the trader's Checkatrade profile
-            const profileRes = await fetch(profileUrl, {
-              headers: HEADERS,
-              signal: AbortSignal.timeout(7000),
-            });
-
-            if (!profileRes.ok) continue;
-            const profileHtml = await profileRes.text();
-
-            // Extract business name
-            const nameMatch =
-              profileHtml.match(/<h1[^>]*>([^<]{3,60})<\/h1>/i) ??
-              profileHtml.match(/"name"\s*:\s*"([^"]{3,60})"/);
-            const businessName = nameMatch?.[1]?.trim().replace(/\s+(Ltd|Limited|LTD)\.?$/i, "") ?? profilePath.split("/").pop() ?? "Unknown";
-
-            // Extract their own website from the profile
-            const websiteMatch =
-              profileHtml.match(/"websiteUrl"\s*:\s*"(https?:\/\/(?!(?:www\.)?checkatrade)[^"]{8,})"/i) ??
-              profileHtml.match(/href="(https?:\/\/(?!(?:www\.)?checkatrade\.com)[^"]{8,})"[^>]*rel="nofollow"/i) ??
-              profileHtml.match(/externalUrl['":\s]+"(https?:\/\/[^"']{8,})"/i);
-            const traderWebsite = websiteMatch?.[1]?.split("?")[0] ?? null;
-
-            // Hunter.io on their website
-            let email: string | null = null;
-            if (traderWebsite) {
-              try {
-                const domain = new URL(traderWebsite).hostname.replace(/^www\./, "");
-                const hr = await fetch(
-                  `https://api.hunter.io/v2/domain-search?domain=${domain}&api_key=${HUNTER_API_KEY}&limit=5`
-                );
-                if (hr.ok) {
-                  const hd = await hr.json();
-                  const emails: any[] = hd.data?.emails ?? [];
-                  email = (emails.find(e => /contact|info|hello|enquir|admin|quote|office/i.test(e.value)) ?? emails[0])?.value ?? null;
-                }
-              } catch {}
-            }
-
-            await supabase.from("outreach_leads").insert({
-              business_name: businessName,
-              trade,
-              email,
-              location,
-              source: "scout",
-              status: email ? "new" : "no_email",
-              notes: profileUrl,
-            });
-
-            totalFound++;
-            if (email) {
-              totalWithEmail++;
-              await agentLog(supabase, "Scout", `✓ ${businessName} — ${email}`, "success", { website: traderWebsite, trade });
-            } else if (traderWebsite) {
-              await agentLog(supabase, "Scout", `◎ ${businessName} — website found but no email on Hunter`, "info");
-            } else {
-              await agentLog(supabase, "Scout", `◎ ${businessName} — no website on their Checkatrade profile`, "info");
-            }
-
-            await new Promise(r => setTimeout(r, 400));
-          } catch (e: any) {
-            await agentLog(supabase, "Scout", `Error on ${profilePath}: ${e.message}`, "error");
-          }
-        }
-
-        await new Promise(r => setTimeout(r, 600));
-      } catch (e: any) {
-        await agentLog(supabase, "Scout", `Search error (${trade} ${location}): ${e.message}`, "error");
+      if (!searchRes.ok) {
+        await agentLog(supabase, "Scout", `Yell returned ${searchRes.status} for ${slug}`, "info");
+        continue;
       }
+
+      const html = await searchRes.text();
+
+      // Debug: log first 300 chars so we can see if page rendered
+      await agentLog(supabase, "Scout", `[debug] ${slug} — HTML starts: ${html.slice(0, 200).replace(/\s+/g, " ")}`, "info");
+
+      // Extract Yell business profile links: /biz/business-name-city-123456/
+      const bizMatches = [...html.matchAll(/href="(\/biz\/[^"?#]{10,}\/?)"/g)];
+      const bizPaths = [...new Set(bizMatches.map(m => m[1]).filter(p => !p.includes("category")))].slice(0, 8);
+
+      if (!bizPaths.length) {
+        await agentLog(supabase, "Scout", `No listings found on Yell for "${slug}" — trying next`, "info");
+        continue;
+      }
+
+      await agentLog(supabase, "Scout", `Found ${bizPaths.length} listings for ${trade}`, "info");
+
+      for (const bizPath of bizPaths) {
+        const bizUrl = `https://www.yell.com${bizPath}`;
+        try {
+          // Skip duplicates
+          const { data: existing } = await supabase
+            .from("outreach_leads").select("id").ilike("notes", `%${bizPath}%`).limit(1);
+          if (existing?.length) continue;
+
+          // Fetch business profile page
+          const bizRes = await fetch(bizUrl, {
+            headers: HEADERS,
+            signal: AbortSignal.timeout(8000),
+          });
+          if (!bizRes.ok) continue;
+
+          const bizHtml = await bizRes.text();
+
+          // Business name
+          const nameMatch =
+            bizHtml.match(/<h1[^>]*itemprop="name"[^>]*>([^<]{2,80})<\/h1>/i) ??
+            bizHtml.match(/<h1[^>]*>([^<]{2,80})<\/h1>/i) ??
+            bizHtml.match(/"name"\s*:\s*"([^"]{2,80})"/);
+          const businessName = nameMatch?.[1]?.trim().replace(/\s+(Ltd|Limited|LTD)\.?$/i, "") ?? "Unknown";
+
+          // Their own website from Yell profile
+          const websiteMatch =
+            bizHtml.match(/href="(https?:\/\/(?!(?:www\.)?yell\.com)[^"]{8,})"[^>]*(?:rel="nofollow"|class="[^"]*website[^"]*")/i) ??
+            bizHtml.match(/"url"\s*:\s*"(https?:\/\/(?!(?:www\.)?yell)[^"]{8,})"/i) ??
+            bizHtml.match(/itemprop="url"[^>]*href="(https?:\/\/(?!(?:www\.)?yell)[^"]{8,})"/i);
+          const traderWebsite = websiteMatch?.[1]?.split("?")[0] ?? null;
+
+          // Hunter.io on their website
+          let email: string | null = null;
+          if (traderWebsite) {
+            try {
+              const domain = new URL(traderWebsite).hostname.replace(/^www\./, "");
+              const hr = await fetch(
+                `https://api.hunter.io/v2/domain-search?domain=${domain}&api_key=${HUNTER_API_KEY}&limit=5`
+              );
+              if (hr.ok) {
+                const hd = await hr.json();
+                const emails: any[] = hd.data?.emails ?? [];
+                email = (
+                  emails.find(e => /contact|info|hello|enquir|admin|quote|office/i.test(e.value)) ?? emails[0]
+                )?.value ?? null;
+              }
+            } catch {}
+          }
+
+          // Store lead
+          const { error: insertError } = await supabase.from("outreach_leads").insert({
+            business_name: businessName,
+            trade,
+            email,
+            location: "Nottingham",
+            source: "scout",
+            status: email ? "new" : "no_email",
+            notes: bizUrl,
+          });
+
+          if (insertError) {
+            await agentLog(supabase, "Scout", `✗ DB insert failed: ${insertError.message}`, "error");
+            continue;
+          }
+
+          totalFound++;
+          if (email) {
+            totalWithEmail++;
+            await agentLog(supabase, "Scout", `✓ ${businessName} — ${email}`, "success", { website: traderWebsite, trade });
+          } else if (traderWebsite) {
+            await agentLog(supabase, "Scout", `◎ ${businessName} — website found but no email on Hunter`, "info");
+          } else {
+            await agentLog(supabase, "Scout", `◎ ${businessName} — no website listed`, "info");
+          }
+
+          await new Promise(r => setTimeout(r, 500));
+        } catch (e: any) {
+          await agentLog(supabase, "Scout", `Error on ${bizPath}: ${e.message}`, "error");
+        }
+      }
+
+      await new Promise(r => setTimeout(r, 700));
+    } catch (e: any) {
+      await agentLog(supabase, "Scout", `Search error (${slug}): ${e.message}`, "error");
     }
   }
 
