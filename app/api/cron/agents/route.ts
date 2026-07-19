@@ -29,77 +29,83 @@ async function sendEmail({ to, subject, text }: { to: string; subject: string; t
   return res.json();
 }
 
-// ── Scout (real lead finder) ─────────────────────────────────────────────────
+// ── Scout (direct Checkatrade scraper — no Google API needed) ────────────────
 async function runScout(supabase: Supa) {
-  const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-  const GOOGLE_CSE_ID = process.env.GOOGLE_CSE_ID;
   const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
-
-  if (!GOOGLE_API_KEY || !GOOGLE_CSE_ID || !HUNTER_API_KEY) {
-    await agentLog(supabase, "Scout", "✗ Missing env vars: GOOGLE_API_KEY, GOOGLE_CSE_ID, HUNTER_API_KEY", "error");
+  if (!HUNTER_API_KEY) {
+    await agentLog(supabase, "Scout", "✗ Missing HUNTER_API_KEY", "error");
     return { totalFound: 0, totalWithEmail: 0 };
   }
 
-  const SKIP = ["checkatrade.com", "yell.com", "mybuilder.com", "ratedpeople.com", "trustatrader.com", "facebook.com", "instagram.com", "twitter.com", "linkedin.com", "google.com", "bark.com", "which.co.uk"];
+  const HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-GB,en;q=0.5",
+  };
 
-  const SEARCHES = [
-    { trade: "plumber",          area: "Nottingham" },
-    { trade: "electrician",      area: "Nottingham" },
-    { trade: "builder",          area: "Nottingham" },
-    { trade: "roofer",           area: "Nottingham" },
-    { trade: "plasterer",        area: "Nottingham" },
-    { trade: "carpenter",        area: "Nottingham" },
-    { trade: "gas engineer",     area: "Nottingham" },
-    { trade: "heating engineer", area: "Nottingham" },
-    { trade: "plumber",          area: "Beeston" },
-    { trade: "electrician",      area: "Arnold" },
-    { trade: "builder",          area: "West Bridgford" },
-    { trade: "roofer",           area: "Hucknall" },
+  const TRADES = [
+    { trade: "plumber",          query: "plumber" },
+    { trade: "electrician",      query: "electrician" },
+    { trade: "builder",          query: "builder" },
+    { trade: "roofer",           query: "roofer" },
+    { trade: "plasterer",        query: "plasterer" },
+    { trade: "carpenter",        query: "carpenter" },
+    { trade: "gas engineer",     query: "gas-engineer" },
+    { trade: "heating engineer", query: "heating-engineer" },
   ];
 
+  const LOCATIONS = ["Nottingham", "NG1", "NG5", "NG7", "NG9"];
   let totalFound = 0, totalWithEmail = 0;
-  await agentLog(supabase, "Scout", `🔍 Searching ${SEARCHES.length} queries for Nottingham trades...`, "info");
 
-  for (const { trade, area } of SEARCHES) {
-    try {
-      const q = encodeURIComponent(`${trade} ${area} contact`);
-      const res = await fetch(`https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CSE_ID}&q=${q}&num=10`);
-      if (!res.ok) { await agentLog(supabase, "Scout", `✗ Google error ${res.status}`, "error"); break; }
-      const data = await res.json();
-      if (data.error) { await agentLog(supabase, "Scout", `✗ ${data.error.message}`, "error"); break; }
+  await agentLog(supabase, "Scout", `🔍 Searching Checkatrade for ${TRADES.length} trades in Nottingham...`, "info");
 
-      for (const item of data.items ?? []) {
-        try {
-          let domain: string;
-          try { domain = new URL(item.link).hostname.replace(/^www\./, ""); } catch { continue; }
-          if (SKIP.some(d => domain.includes(d))) continue;
+  for (const { trade, query } of TRADES) {
+    for (const location of LOCATIONS.slice(0, 2)) {
+      try {
+        const searchUrl = `https://www.checkatrade.com/search?tradeName=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`;
+        const searchRes = await fetch(searchUrl, { headers: HEADERS, signal: AbortSignal.timeout(8000) });
+        if (!searchRes.ok) continue;
 
-          const { data: ex } = await supabase.from("outreach_leads").select("id").ilike("notes", `%${domain}%`).limit(1);
+        const html = await searchRes.text();
+        const profilePaths = [...new Set([...html.matchAll(/href="(\/trades\/[A-Za-z0-9_-]+)"/g)].map(m => m[1]))].slice(0, 5);
+        if (!profilePaths.length) continue;
+
+        for (const profilePath of profilePaths) {
+          const profileUrl = `https://www.checkatrade.com${profilePath}`;
+          const { data: ex } = await supabase.from("outreach_leads").select("id").ilike("notes", `%${profilePath}%`).limit(1);
           if (ex?.length) continue;
 
-          const businessName = item.title.split(/\s[-|–·]\s/)[0].replace(/\s+(Ltd|Limited|LTD)\.?$/i, "").trim().substring(0, 80) || domain;
+          const profileRes = await fetch(profileUrl, { headers: HEADERS, signal: AbortSignal.timeout(7000) });
+          if (!profileRes.ok) continue;
+          const profileHtml = await profileRes.text();
+
+          const nameMatch = profileHtml.match(/<h1[^>]*>([^<]{3,60})<\/h1>/i) ?? profileHtml.match(/"name"\s*:\s*"([^"]{3,60})"/);
+          const businessName = nameMatch?.[1]?.trim().replace(/\s+(Ltd|Limited|LTD)\.?$/i, "") ?? profilePath.split("/").pop() ?? "Unknown";
+
+          const websiteMatch =
+            profileHtml.match(/"websiteUrl"\s*:\s*"(https?:\/\/(?!(?:www\.)?checkatrade)[^"]{8,})"/i) ??
+            profileHtml.match(/href="(https?:\/\/(?!(?:www\.)?checkatrade\.com)[^"]{8,})"[^>]*rel="nofollow"/i);
+          const traderWebsite = websiteMatch?.[1]?.split("?")[0] ?? null;
 
           let email: string | null = null;
-          const hr = await fetch(`https://api.hunter.io/v2/domain-search?domain=${domain}&api_key=${HUNTER_API_KEY}&limit=5`);
-          if (hr.ok) {
-            const hd = await hr.json();
-            const emails: any[] = hd.data?.emails ?? [];
-            email = (emails.find(e => /contact|info|hello|enquir|admin|quote|office/i.test(e.value)) ?? emails[0])?.value ?? null;
+          if (traderWebsite) {
+            const domain = new URL(traderWebsite).hostname.replace(/^www\./, "");
+            const hr = await fetch(`https://api.hunter.io/v2/domain-search?domain=${domain}&api_key=${HUNTER_API_KEY}&limit=5`);
+            if (hr.ok) {
+              const hd = await hr.json();
+              const emails: any[] = hd.data?.emails ?? [];
+              email = (emails.find(e => /contact|info|hello|enquir|admin|quote|office/i.test(e.value)) ?? emails[0])?.value ?? null;
+            }
           }
 
-          const AREAS = ["Nottingham", "Beeston", "Arnold", "Hucknall", "Clifton", "West Bridgford", "Bulwell", "Carlton", "Nottinghamshire"];
-          const location = AREAS.find(a => `${item.snippet ?? ""} ${item.title}`.includes(a)) ?? area;
-
-          await supabase.from("outreach_leads").insert({ business_name: businessName, trade, email, location, source: "scout", status: email ? "new" : "no_email", notes: item.link });
+          await supabase.from("outreach_leads").insert({ business_name: businessName, trade, email, location, source: "scout", status: email ? "new" : "no_email", notes: profileUrl });
           totalFound++;
-          if (email) { totalWithEmail++; await agentLog(supabase, "Scout", `✓ ${businessName} — ${email}`, "success", { domain, trade }); }
-          else { await agentLog(supabase, "Scout", `◎ ${businessName} (${domain}) — no email`, "info"); }
-          await new Promise(r => setTimeout(r, 250));
-        } catch {}
-      }
-      await new Promise(r => setTimeout(r, 300));
-    } catch (e: any) {
-      await agentLog(supabase, "Scout", `✗ ${trade} ${area}: ${e.message}`, "error");
+          if (email) { totalWithEmail++; await agentLog(supabase, "Scout", `✓ ${businessName} — ${email}`, "success", { trade }); }
+          else { await agentLog(supabase, "Scout", `◎ ${businessName} — ${traderWebsite ? "no email on Hunter" : "no website on profile"}`, "info"); }
+          await new Promise(r => setTimeout(r, 400));
+        }
+        await new Promise(r => setTimeout(r, 600));
+      } catch {}
     }
   }
 
