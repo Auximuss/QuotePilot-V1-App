@@ -669,9 +669,19 @@ export default function AdminPage() {
                 <div className="font-mono text-[11px] uppercase tracking-widest text-textDimmer">Demand Pilot</div>
                 <div className="font-barlow text-[20px] font-bold tracking-tight">Agent Fleet</div>
               </div>
-              <div className="flex items-center gap-1.5 rounded-full border border-ok/30 bg-ok/10 px-3 py-1">
-                <div className={`h-1.5 w-1.5 rounded-full ${runningAgent ? "bg-ok animate-pulse" : "bg-ok/40"}`} />
-                <span className="font-mono text-[9px] uppercase tracking-widest text-ok">{runningAgent ? "Active" : "Standby"}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => runAgent("pipeline")}
+                  disabled={runningAgent !== null}
+                  className="flex items-center gap-1.5 rounded-full border border-ok/40 bg-ok/10 px-3 py-1.5 font-mono text-[9px] font-bold uppercase tracking-widest text-ok transition-all hover:bg-ok/20 disabled:opacity-40"
+                >
+                  <div className={`h-1.5 w-1.5 rounded-full ${runningAgent === "pipeline" ? "bg-ok animate-pulse" : "bg-ok/60"}`} />
+                  {runningAgent === "pipeline" ? "Running…" : "Run All"}
+                </button>
+                <div className="flex items-center gap-1.5 rounded-full border border-[#1e2025] bg-[#0d0f11] px-3 py-1">
+                  <div className={`h-1.5 w-1.5 rounded-full ${runningAgent ? "bg-ok animate-pulse" : "bg-ok/40"}`} />
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-ok">{runningAgent ? "Active" : "Standby"}</span>
+                </div>
               </div>
             </div>
 
@@ -766,7 +776,7 @@ export default function AdminPage() {
                 ) : agentLogs.length === 0 ? (
                   <div className="py-6 text-center font-mono text-[10px] text-textDimmer">No comms yet — run an agent to see output</div>
                 ) : agentLogs.map((log) => {
-                  const agentColours: Record<string, string> = { Scout: "#3b82f6", Writer: "#a855f7", Sender: "#ff6a1f", Reporter: "#22c55e" };
+                  const agentColours: Record<string, string> = { Scout: "#3b82f6", Writer: "#a855f7", Sender: "#ff6a1f", Reporter: "#22c55e", Pipeline: "#22c55e" };
                   const colour = agentColours[log.agent] ?? "#6b7280";
                   return (
                     <div key={log.id} className="flex items-start gap-3 border-b border-[#1a1c21] px-4 py-2.5 last:border-0">

@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
-
-const ADMIN_EMAILS = ["aux6998@gmail.com", "pryeralex492@gmail.com"];
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/admin";
 
 export async function GET() {
-  const supabase = createServiceClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !ADMIN_EMAILS.includes(user.email ?? "")) {
+  const { data: { user } } = await createClient().auth.getUser();
+  if (!user || !isAdmin(user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+  const supabase = createServiceClient();
 
   const { data } = await supabase
     .from("outreach_leads")
@@ -19,11 +18,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = createServiceClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !ADMIN_EMAILS.includes(user.email ?? "")) {
+  const { data: { user } } = await createClient().auth.getUser();
+  if (!user || !isAdmin(user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+  const supabase = createServiceClient();
 
   const body = await req.json();
   const { business_name, trade, email, location, phone } = body;
@@ -39,11 +38,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const supabase = createServiceClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !ADMIN_EMAILS.includes(user.email ?? "")) {
+  const { data: { user } } = await createClient().auth.getUser();
+  if (!user || !isAdmin(user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+  const supabase = createServiceClient();
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");

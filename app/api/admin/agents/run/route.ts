@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/admin";
 import OpenAI from "openai";
 
 async function sendEmail({ to, subject, text }: { to: string; subject: string; text: string }) {
@@ -19,8 +20,6 @@ async function sendEmail({ to, subject, text }: { to: string; subject: string; t
   if (!res.ok) throw new Error(`Resend error: ${await res.text()}`);
   return res.json();
 }
-
-const ADMIN_EMAILS = ["aux6998@gmail.com", "pryeralex492@gmail.com"];
 
 type SupabaseClient = ReturnType<typeof createServiceClient>;
 
@@ -184,21 +183,46 @@ async function runReporter(supabase: SupabaseClient) {
   return { message: "Report sent to your email", report };
 }
 
+// ── Full pipeline (Scout → Writer → Sender → Reporter) ───────────────────────
+async function runPipeline(supabase: SupabaseClient) {
+  await agentLog(supabase, "Pipeline", "🚀 Starting full pipeline: Scout → Writer → Sender → Reporter", "info");
+  const scoutResult = await runScout(supabase);
+  const writerResult = await runWriter(supabase);
+  const senderResult = await runSender(supabase);
+  const reporterResult = await runReporter(supabase);
+  await agentLog(supabase, "Pipeline", "✅ Full pipeline complete", "success");
+  return { scout: scoutResult, writer: writerResult, sender: senderResult, reporter: reporterResult };
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
-  const supabase = createServiceClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !ADMIN_EMAILS.includes(user.email ?? "")) {
+  const { data: { user } } = await createClient().auth.getUser();
+  if (!user || !isAdmin(user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+  const supabase = createServiceClient();
 
   const { agent } = await req.json();
 
   try {
-    if (agent === "scout") return NextResponse.json(await runScout(supabase));
-    if (agent === "writer") return NextResponse.json(await runWriter(supabase));
+    // Auto-chain: scout runs writer, writer runs sender
+    if (agent === "scout") {
+      const scoutResult = await runScout(supabase);
+      await agentLog(supabase, "Pipeline", "⛓ Scout complete — handing off to Writer...", "info");
+      const writerResult = await runWriter(supabase);
+      await agentLog(supabase, "Pipeline", "⛓ Writer complete — handing off to Sender...", "info");
+      const senderResult = await runSender(supabase);
+      return NextResponse.json({ scout: scoutResult, writer: writerResult, sender: senderResult });
+    }
+    if (agent === "writer") {
+      const writerResult = await runWriter(supabase);
+      await agentLog(supabase, "Pipeline", "⛓ Writer complete — handing off to Sender...", "info");
+      const senderResult = await runSender(supabase);
+      return NextResponse.json({ writer: writerResult, sender: senderResult });
+    }
     if (agent === "sender") return NextResponse.json(await runSender(supabase));
     if (agent === "reporter") return NextResponse.json(await runReporter(supabase));
+    if (agent === "pipeline") return NextResponse.json(await runPipeline(supabase));
     return NextResponse.json({ error: "Unknown agent" }, { status: 400 });
   } catch (e: any) {
     await agentLog(supabase, agent, `✗ Agent crashed: ${e.message}`, "error");
