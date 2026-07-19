@@ -10,6 +10,8 @@ type Conversation = { businessId: string; businessName: string; userEmail: strin
 type Stats = { totalUsers: number; activeSubscriptions: number; monthlyRevenue: number; quotesThisMonth: number; users: UserRow[] };
 type ActivityEvent = { type: string; label: string; sub: string; at: string; quoteId: string };
 type WeekRow = { label: string; signups: number; quotes: number };
+type AgentLog = { id: string; agent: string; message: string; type: string; created_at: string };
+type Lead = { id: string; business_name: string; trade: string; email: string; location: string; phone: string; status: string; email_body?: string; email_subject?: string; email_sent_at?: string; created_at: string };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const PLAN_COLOURS: Record<string, string> = {
@@ -73,6 +75,17 @@ export default function AdminPage() {
   const [broadcastSending, setBroadcastSending] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState<string | null>(null);
 
+  // Agents tab state
+  const [agentLogs, setAgentLogs] = useState<AgentLog[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [agentsLoading, setAgentsLoading] = useState(false);
+  const [runningAgent, setRunningAgent] = useState<string | null>(null);
+  const [agentResult, setAgentResult] = useState<string | null>(null);
+  const [showAddLead, setShowAddLead] = useState(false);
+  const [newLead, setNewLead] = useState({ business_name: "", trade: "", email: "", location: "", phone: "" });
+  const [addingLead, setAddingLead] = useState(false);
+  const [expandedLead, setExpandedLead] = useState<string | null>(null);
+
   // Rename / delete tickets
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -92,6 +105,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (tab === "support") loadSupport();
     if (tab === "activity" || tab === "analytics") loadActivity();
+    if (tab === "agents") loadAgents();
   }, [tab]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [activeConv?.messages.length]);
@@ -173,6 +187,53 @@ export default function AdminPage() {
     setDeletingId(null);
   }
 
+  async function loadAgents() {
+    setAgentsLoading(true);
+    const [logsRes, leadsRes] = await Promise.all([
+      fetch("/api/admin/agents/logs"),
+      fetch("/api/admin/agents/leads"),
+    ]);
+    const logsData = await logsRes.json();
+    const leadsData = await leadsRes.json();
+    setAgentLogs(logsData.logs ?? []);
+    setLeads(leadsData.leads ?? []);
+    setAgentsLoading(false);
+  }
+
+  async function runAgent(agent: string) {
+    setRunningAgent(agent);
+    setAgentResult(null);
+    const res = await fetch("/api/admin/agents/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ agent }),
+    });
+    const d = await res.json();
+    setRunningAgent(null);
+    setAgentResult(d.message ?? d.error ?? "Done");
+    setTimeout(() => setAgentResult(null), 5000);
+    loadAgents();
+  }
+
+  async function addLead() {
+    if (!newLead.email.trim() && !newLead.business_name.trim()) return;
+    setAddingLead(true);
+    await fetch("/api/admin/agents/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newLead),
+    });
+    setNewLead({ business_name: "", trade: "", email: "", location: "", phone: "" });
+    setAddingLead(false);
+    setShowAddLead(false);
+    loadAgents();
+  }
+
+  async function deleteLead(id: string) {
+    await fetch(`/api/admin/agents/leads?id=${id}`, { method: "DELETE" });
+    setLeads(prev => prev.filter(l => l.id !== id));
+  }
+
   const totalUnread = conversations.reduce((s, c) => s + c.unread, 0);
 
   const filteredUsers = (stats?.users ?? []).filter((u) => {
@@ -188,6 +249,7 @@ export default function AdminPage() {
     { id: "analytics", label: "Analytics" },
     { id: "support", label: "Support", badge: totalUnread },
     { id: "broadcast", label: "Broadcast" },
+    { id: "agents", label: "🤖 Agents" },
   ] as const;
 
   if (statsLoading) return <div className="flex min-h-screen items-center justify-center"><div className="text-xs text-textDim">Loading admin panel…</div></div>;
@@ -597,6 +659,171 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+        {/* ── Agents ────────────────────────────────────────────────────────── */}
+        {tab === "agents" && (
+          <div className="space-y-5">
+
+            {/* Agent result toast */}
+            {agentResult && (
+              <div className="rounded-xl border border-ok/30 bg-ok/10 px-4 py-2.5 text-[12px] font-semibold text-ok">{agentResult}</div>
+            )}
+
+            {/* ── Agent Fleet ── */}
+            <div>
+              <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-textDimmer">Core Fleet</div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { id: "scout", name: "Scout", role: "Lead Finder", icon: "🔍", desc: "Generates search queries to find tradesperson leads" },
+                  { id: "writer", name: "Writer", role: "Email Generator", icon: "✍️", desc: "Writes personalised cold emails for each lead" },
+                  { id: "sender", name: "Sender", role: "Email Queue", icon: "📤", desc: "Sends emails via Resend to all ready leads" },
+                  { id: "reporter", name: "Reporter", role: "Daily Briefing", icon: "📊", desc: "Emails you a daily outreach summary" },
+                ].map((agent) => (
+                  <div key={agent.id} className="rounded-2xl border border-line bg-panel p-3.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="text-2xl">{agent.icon}</div>
+                      <div className={`h-2 w-2 flex-none rounded-full mt-1 ${runningAgent === agent.id ? "bg-ok animate-pulse" : "bg-line"}`} />
+                    </div>
+                    <div className="mt-2 font-barlow text-[14px] font-bold">{agent.name}</div>
+                    <div className="font-mono text-[9px] uppercase tracking-wider text-textDim">{agent.role}</div>
+                    <div className="mt-1.5 text-[10px] leading-relaxed text-textDimmer">{agent.desc}</div>
+                    <button
+                      onClick={() => runAgent(agent.id)}
+                      disabled={runningAgent !== null}
+                      className="mt-3 w-full rounded-xl bg-hazard/15 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wide text-hazard transition-colors hover:bg-hazard/25 disabled:opacity-40"
+                    >
+                      {runningAgent === agent.id ? "Running…" : `Run ${agent.name}`}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Lead Stats ── */}
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: "New", value: leads.filter(l => l.status === "new").length, colour: "text-textDim" },
+                { label: "Ready", value: leads.filter(l => l.status === "email_ready").length, colour: "text-blue-400" },
+                { label: "Sent", value: leads.filter(l => l.status === "email_sent").length, colour: "text-hazard" },
+                { label: "Replied", value: leads.filter(l => l.status === "replied").length, colour: "text-ok" },
+              ].map((s) => (
+                <div key={s.label} className="rounded-xl border border-line bg-panel p-3 text-center">
+                  <div className={`font-barlow text-2xl font-bold ${s.colour}`}>{s.value}</div>
+                  <div className="mt-0.5 font-mono text-[9px] uppercase tracking-wider text-textDimmer">{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Comms Feed ── */}
+            <div className="rounded-2xl border border-line bg-panel p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-textDimmer">Comms Feed</div>
+                <div className="flex gap-2">
+                  <button onClick={loadAgents} className="text-[10px] text-textDim border border-line rounded-lg px-2 py-1 hover:bg-panelRaised">↻ Refresh</button>
+                  <button onClick={() => fetch("/api/admin/agents/logs", { method: "DELETE" }).then(loadAgents)} className="text-[10px] text-warn border border-warn/30 rounded-lg px-2 py-1 hover:bg-warn/10">Clear</button>
+                </div>
+              </div>
+              {agentsLoading ? (
+                <div className="py-4 text-center text-[11px] text-textDim">Loading…</div>
+              ) : agentLogs.length === 0 ? (
+                <div className="py-4 text-center text-[11px] text-textDim">No logs yet — run an agent to see output here</div>
+              ) : (
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {agentLogs.map((log) => (
+                    <div key={log.id} className="flex items-start gap-2.5 rounded-lg px-2.5 py-2 bg-panelRaised">
+                      <span className={`flex-none rounded-md px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase ${
+                        log.agent === "Scout" ? "bg-blue-500/15 text-blue-400" :
+                        log.agent === "Writer" ? "bg-purple-500/15 text-purple-400" :
+                        log.agent === "Sender" ? "bg-hazard/15 text-hazard" :
+                        "bg-ok/15 text-ok"
+                      }`}>{log.agent}</span>
+                      <span className={`flex-1 text-[11px] leading-relaxed ${log.type === "error" ? "text-warn" : log.type === "success" ? "text-ok" : "text-textDim"}`}>{log.message}</span>
+                      <span className="flex-none font-mono text-[9px] text-textDimmer">{timeAgo(log.created_at)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Leads Table ── */}
+            <div className="rounded-2xl border border-line bg-panel p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-textDimmer">Leads ({leads.length})</div>
+                <button
+                  onClick={() => setShowAddLead(!showAddLead)}
+                  className="rounded-xl bg-hazard/15 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wide text-hazard hover:bg-hazard/25"
+                >
+                  + Add Lead
+                </button>
+              </div>
+
+              {/* Add lead form */}
+              {showAddLead && (
+                <div className="mb-4 rounded-xl border border-hazard/30 bg-hazard/5 p-3 space-y-2">
+                  <div className="font-mono text-[10px] uppercase tracking-wider text-hazard mb-2">New Lead</div>
+                  {[
+                    { key: "business_name", placeholder: "Business name (e.g. Smith Plumbing)" },
+                    { key: "trade", placeholder: "Trade (e.g. Plumber)" },
+                    { key: "email", placeholder: "Email address *" },
+                    { key: "location", placeholder: "Location (e.g. Nottingham)" },
+                    { key: "phone", placeholder: "Phone (optional)" },
+                  ].map(({ key, placeholder }) => (
+                    <input
+                      key={key}
+                      value={newLead[key as keyof typeof newLead]}
+                      onChange={e => setNewLead(prev => ({ ...prev, [key]: e.target.value }))}
+                      placeholder={placeholder}
+                      className="w-full rounded-lg border border-line bg-panelRaised px-3 py-2 text-[12px] text-paper placeholder:text-textDimmer focus:border-hazard focus:outline-none"
+                    />
+                  ))}
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={addLead} disabled={addingLead || (!newLead.email.trim() && !newLead.business_name.trim())}
+                      className="flex-1 rounded-xl bg-hazard py-2 font-barlow text-[13px] font-bold text-[#161006] disabled:opacity-50">
+                      {addingLead ? "Adding…" : "Add Lead"}
+                    </button>
+                    <button onClick={() => setShowAddLead(false)} className="rounded-xl border border-line px-4 py-2 text-[12px] text-textDim">Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {leads.length === 0 ? (
+                <div className="py-4 text-center text-[11px] text-textDim">No leads yet — add your first lead above</div>
+              ) : (
+                <div className="space-y-2">
+                  {leads.map((lead) => (
+                    <div key={lead.id} className="rounded-xl border border-line bg-panelRaised">
+                      <div className="flex items-center gap-2 px-3 py-2.5 cursor-pointer" onClick={() => setExpandedLead(expandedLead === lead.id ? null : lead.id)}>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[12px] font-semibold truncate">{lead.business_name || lead.email || "—"}</span>
+                            <span className={`rounded-full px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase ${
+                              lead.status === "new" ? "bg-line text-textDim" :
+                              lead.status === "email_ready" ? "bg-blue-500/15 text-blue-400" :
+                              lead.status === "email_sent" ? "bg-hazard/15 text-hazard" :
+                              lead.status === "replied" ? "bg-ok/15 text-ok" :
+                              "bg-purple-500/15 text-purple-400"
+                            }`}>{lead.status.replace("_", " ")}</span>
+                          </div>
+                          <div className="text-[10px] text-textDim truncate">{[lead.trade, lead.email, lead.location].filter(Boolean).join(" · ")}</div>
+                        </div>
+                        <button onClick={e => { e.stopPropagation(); deleteLead(lead.id); }}
+                          className="flex-none rounded-lg border border-warn/20 px-2 py-1 font-mono text-[9px] text-warn hover:bg-warn/10">✕</button>
+                      </div>
+                      {expandedLead === lead.id && lead.email_body && (
+                        <div className="border-t border-line px-3 py-3">
+                          <div className="mb-1 font-mono text-[9px] uppercase tracking-wider text-textDimmer">Generated Email</div>
+                          <div className="mb-1 text-[11px] font-semibold text-hazard">{lead.email_subject}</div>
+                          <div className="whitespace-pre-wrap text-[11px] leading-relaxed text-textDim">{lead.email_body}</div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
       </div>
     </div>
   );
