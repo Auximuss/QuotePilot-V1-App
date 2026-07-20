@@ -14,6 +14,7 @@ async function sendEmail({ to, subject, text }: { to: string; subject: string; t
     },
     body: JSON.stringify({
       from: "Alex at Demand Pilot <alex@demandpilot.co.uk>",
+      reply_to: "pryeralex492@gmail.com",
       to, subject, text,
     }),
   });
