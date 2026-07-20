@@ -13,7 +13,7 @@ async function sendEmail({ to, subject, text }: { to: string; subject: string; t
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "Alex at Demand Pilot <onboarding@resend.dev>",
+      from: "Alex at Demand Pilot <alex@demandpilot.co.uk>",
       to, subject, text,
     }),
   });
