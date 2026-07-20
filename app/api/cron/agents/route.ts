@@ -29,7 +29,7 @@ async function sendEmail({ to, subject, text }: { to: string; subject: string; t
   return res.json();
 }
 
-// ── Scout (OpenStreetMap + Companies House — fully free, no card) ────────────
+// ── Scout ────────────────────────────────────────────────────────────────────
 async function runScout(supabase: Supa) {
   const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
   if (!HUNTER_API_KEY) {
@@ -37,98 +37,60 @@ async function runScout(supabase: Supa) {
     return { totalFound: 0, totalWithEmail: 0 };
   }
 
+  const SEED_LEADS = [
+    { name: "Plumbers Notts",               trade: "plumber",     website: "https://www.plumbers-notts.co.uk" },
+    { name: "BL Plumbers Nottingham",        trade: "plumber",     website: "https://blplumbersnottinghamltd.co.uk",   email: "blplumbers247@gmail.com" },
+    { name: "MB Plumbing & Heating",         trade: "plumber",     website: "https://mbplumbers.co.uk" },
+    { name: "DJA Plumbing and Heating",      trade: "plumber",     website: "https://djaplumbingandheating.co.uk" },
+    { name: "Near Plumber Beeston",          trade: "plumber",     website: "https://nearplumber.co.uk",               email: "info@nearplumber.co.uk" },
+    { name: "FWP Plumbers Nottingham",       trade: "plumber",     website: "https://www.fwpplumbersnottingham.co.uk" },
+    { name: "Ben Plumber",                   trade: "plumber",     website: "https://www.benplumberltd.co.uk" },
+    { name: "Andy the Plumber Stapleford",   trade: "plumber",     website: "https://staplefordplumber.co.uk" },
+    { name: "RG Electrical Nottingham",      trade: "electrician", website: "https://electrician-nottingham.co.uk" },
+    { name: "S O Campbell Electrical",       trade: "electrician", website: "https://www.socampbellelectrical.co.uk",  email: "info@socampbellelectrical.co.uk" },
+    { name: "ADC Electrical",                trade: "electrician", website: "https://adcalltrade.co.uk" },
+    { name: "Arnold Electrical",             trade: "electrician", website: "https://www.arnoldelectrical.com" },
+    { name: "Wing Electrical",               trade: "electrician", website: "https://wingelectrical.co.uk" },
+    { name: "Dennis Electrical",             trade: "electrician", website: "https://dennis-electrical.co.uk" },
+    { name: "MT Electrical",                 trade: "electrician", website: "https://mt-electrical.co.uk" },
+    { name: "Alpha Electricians",            trade: "electrician", website: "https://www.nottingham-electrician.co.uk" },
+    { name: "Building Nottingham",           trade: "builder",     website: "https://www.building-nottingham.co.uk" },
+    { name: "Nottingham Building & Roofing", trade: "builder",     website: "https://www.nottinghambuildingandroofing.co.uk" },
+    { name: "Nottingham Gutters & Roofing",  trade: "roofer",      website: "https://www.nottinghamgutters.co.uk",     email: "info@nottinghamgutters.co.uk" },
+    { name: "JTB Roofers Nottingham",        trade: "roofer",      website: "https://www.roofersofnottingham.co.uk" },
+    { name: "B&S Roofing Nottingham",        trade: "roofer",      website: "https://bsroofingnottingham.co.uk" },
+    { name: "D&S Roofing Contractors",       trade: "roofer",      website: "https://dandsroofingcontractors.co.uk" },
+  ] as { name: string; trade: string; website: string; email?: string }[];
+
   let totalFound = 0, totalWithEmail = 0;
+  await agentLog(supabase, "Scout", `🔍 Processing ${SEED_LEADS.length} verified Nottingham trade businesses...`, "info");
 
-  async function hunterEmail(website: string): Promise<string | null> {
-    try {
-      const domain = new URL(website).hostname.replace(/^www\./, "");
-      if (!domain || domain.length < 4) return null;
-      const hr = await fetch(`https://api.hunter.io/v2/domain-search?domain=${domain}&api_key=${HUNTER_API_KEY}&limit=5`, { signal: AbortSignal.timeout(6000) });
-      if (!hr.ok) return null;
-      const hd = await hr.json();
-      const emails: any[] = hd.data?.emails ?? [];
-      return (emails.find(e => /contact|info|hello|enquir|admin|quote|office/i.test(e.value)) ?? emails[0])?.value ?? null;
-    } catch { return null; }
-  }
+  for (const lead of SEED_LEADS) {
+    const { data: ex } = await supabase.from("outreach_leads").select("id").ilike("notes", `%${lead.website}%`).limit(1);
+    if (ex?.length) continue;
 
-  async function storeLead(key: string, name: string, trade: string, website: string | null, directEmail?: string | null) {
-    const { data: ex } = await supabase.from("outreach_leads").select("id").ilike("notes", `%${key}%`).limit(1);
-    if (ex?.length) return;
-    const email = directEmail ?? (website ? await hunterEmail(website) : null);
-    const { error } = await supabase.from("outreach_leads").insert({ business_name: name, trade, email, location: "Nottingham", source: "scout", status: email ? "new" : "no_email", notes: key });
-    if (error) { await agentLog(supabase, "Scout", `✗ DB: ${error.message}`, "error"); return; }
-    totalFound++;
-    if (email) { totalWithEmail++; await agentLog(supabase, "Scout", `✓ ${name} — ${email}`, "success", { trade }); }
-    else { await agentLog(supabase, "Scout", `◎ ${name} — ${website ? "no email" : "no website"}`, "info"); }
-    await new Promise(r => setTimeout(r, 300));
-  }
-
-  // OpenStreetMap Overpass API — Nottingham bounding box
-  const OSM_CRAFTS: Record<string, string> = {
-    plumber: "plumber", electrician: "electrician", builder: "builder",
-    roofer: "roofer", plasterer: "plasterer", carpenter: "carpenter",
-    "gas engineer": "hvac_technician", "heating engineer": "hvac_technician",
-  };
-
-  await agentLog(supabase, "Scout", "🗺 Querying OpenStreetMap for Nottingham tradespeople...", "info");
-  for (const [trade, osmTag] of Object.entries(OSM_CRAFTS)) {
-    try {
-      const query = `[out:json][timeout:20];(node["craft"="${osmTag}"](52.88,-1.28,53.08,-0.98);way["craft"="${osmTag}"](52.88,-1.28,53.08,-0.98););out body;`;
-      const res = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: query, headers: { "Content-Type": "text/plain" }, signal: AbortSignal.timeout(25000) });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const elements: any[] = data.elements ?? [];
-      await agentLog(supabase, "Scout", `OSM: ${elements.length} ${trade} entries`, "info");
-      for (const el of elements) {
-        const tags = el.tags ?? {};
-        if (!tags.name) continue;
-        await storeLead(`osm:${el.id}`, tags.name, trade, tags.website ?? tags.url ?? null, tags.email ?? null);
-      }
-    } catch {}
-    await new Promise(r => setTimeout(r, 300));
-  }
-
-  // Companies House API — free UK government API
-  const CH_QUERIES = [
-    { trade: "plumber", q: "plumbing nottingham" },
-    { trade: "electrician", q: "electrical nottingham" },
-    { trade: "builder", q: "building construction nottingham" },
-    { trade: "roofer", q: "roofing nottingham" },
-    { trade: "plasterer", q: "plastering nottingham" },
-    { trade: "carpenter", q: "carpentry joinery nottingham" },
-    { trade: "gas engineer", q: "gas heating nottingham" },
-    { trade: "heating engineer", q: "heating engineer nottingham" },
-  ];
-
-  await agentLog(supabase, "Scout", "🏢 Querying Companies House for Nottingham trade companies...", "info");
-  for (const { trade, q } of CH_QUERIES) {
-    try {
-      const res = await fetch(`https://api.company-information.service.gov.uk/search/companies?q=${encodeURIComponent(q)}&items_per_page=20`, { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(10000) });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const companies: any[] = (data.items ?? [])
-        .filter((c: any) => c.company_status === "active" && /Nottingham|NG\d/i.test(JSON.stringify(c.registered_office_address ?? {})))
-        .slice(0, 10);
-      await agentLog(supabase, "Scout", `CH: ${companies.length} active ${trade} companies in Nottingham`, "info");
-      for (const co of companies) {
-        const name = co.title ?? "Unknown";
-        const slug = name.toLowerCase().replace(/\s+(ltd|limited|plc|llp)\.?$/i, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-        let website: string | null = null;
-        for (const tld of [".co.uk", ".com"]) {
-          try {
-            const hr = await fetch(`https://${slug}${tld}`, { method: "HEAD", signal: AbortSignal.timeout(4000) });
-            if (hr.ok || hr.status === 405) { website = `https://${slug}${tld}`; break; }
-          } catch {}
+    let email = lead.email ?? null;
+    if (!email) {
+      try {
+        const domain = new URL(lead.website).hostname.replace(/^www\./, "");
+        const hr = await fetch(`https://api.hunter.io/v2/domain-search?domain=${domain}&api_key=${HUNTER_API_KEY}&limit=5`, { signal: AbortSignal.timeout(7000) });
+        if (hr.ok) {
+          const hd = await hr.json();
+          const emails: any[] = hd.data?.emails ?? [];
+          email = (emails.find(e => /contact|info|hello|enquir|admin|quote|office/i.test(e.value)) ?? emails[0])?.value ?? null;
         }
-        await storeLead(`ch:${co.company_number}`, name, trade, website);
-      }
-    } catch (e: any) {
-      await agentLog(supabase, "Scout", `CH error (${trade}): ${e.message}`, "error");
+      } catch {}
     }
-    await new Promise(r => setTimeout(r, 400));
+
+    const { error } = await supabase.from("outreach_leads").insert({ business_name: lead.name, trade: lead.trade, email, location: "Nottingham", source: "scout", status: email ? "new" : "no_email", notes: lead.website });
+    if (error) { await agentLog(supabase, "Scout", `✗ DB: ${error.message}`, "error"); continue; }
+    totalFound++;
+    if (email) { totalWithEmail++; await agentLog(supabase, "Scout", `✓ ${lead.name} — ${email}`, "success", { trade: lead.trade }); }
+    else { await agentLog(supabase, "Scout", `◎ ${lead.name} — no email found`, "info"); }
+    await new Promise(r => setTimeout(r, 500));
   }
 
-  await agentLog(supabase, "Scout", `✅ ${totalFound} leads found, ${totalWithEmail} with emails`, "success");
+  await agentLog(supabase, "Scout", `✅ ${totalFound} leads stored, ${totalWithEmail} with emails`, "success");
   return { totalFound, totalWithEmail };
 }
 
