@@ -60,6 +60,29 @@ async function runScout(supabase: Supa) {
     { name: "JTB Roofers Nottingham",        trade: "roofer",      website: "https://www.roofersofnottingham.co.uk" },
     { name: "B&S Roofing Nottingham",        trade: "roofer",      website: "https://bsroofingnottingham.co.uk" },
     { name: "D&S Roofing Contractors",       trade: "roofer",      website: "https://dandsroofingcontractors.co.uk" },
+    // Plasterers
+    { name: "JB Plastering Nottingham",      trade: "plasterer",   website: "https://www.plasterernottinghamshire.co.uk" },
+    { name: "Marklands Plastering",          trade: "plasterer",   website: "https://www.marklandsplastering.co.uk" },
+    { name: "Quality Plastering Nottingham", trade: "plasterer",   website: "https://www.qualityplasteringnottingham.co.uk" },
+    { name: "ATK Plastering Ltd",            trade: "plasterer",   website: "https://www.atkplastering.co.uk" },
+    { name: "DF Plastering Nottingham",      trade: "plasterer",   website: "https://dfplasteringnottingham.com" },
+    { name: "RJ Bethell Plastering",         trade: "plasterer",   website: "https://www.nottinghamplasterer.co.uk" },
+    { name: "JSL Plastering",                trade: "plasterer",   website: "https://www.jslplastering.co.uk" },
+    { name: "AS Complete Plastering",        trade: "plasterer",   website: "https://www.ascompleteplastering.co.uk" },
+    // Carpenters & Joiners
+    { name: "Joiner Nottingham",             trade: "carpenter",   website: "https://www.joinernottingham.co.uk" },
+    { name: "S Kirk Joinery",                trade: "carpenter",   website: "https://www.skirkjoinery.co.uk" },
+    { name: "Trentside Joinery",             trade: "carpenter",   website: "https://trentsidejoinery.com" },
+    { name: "Redwood Joinery Ltd",           trade: "carpenter",   website: "https://www.redwood-joinery.co.uk" },
+    // Gas Engineers
+    { name: "Gaswise Nottingham",            trade: "gas engineer", website: "https://www.gaswiseonline.co.uk" },
+    { name: "We Fix Boilers Nottingham",     trade: "gas engineer", website: "https://www.wefixboilers.co.uk" },
+    { name: "Nottingham Gas Services",       trade: "gas engineer", website: "https://www.nottinghamgasservices.co.uk" },
+    { name: "Nottingham Boiler Shop",        trade: "gas engineer", website: "https://www.nottinghamboilershop.co.uk" },
+    { name: "Nottingham Boiler Solutions",   trade: "gas engineer", website: "https://nottinghamboilersolutions.co.uk" },
+    { name: "CCMK Gas Nottingham",           trade: "gas engineer", website: "https://ccmkgas.co.uk" },
+    { name: "Nottingham Heating",            trade: "gas engineer", website: "https://www.nottinghamheating.co.uk" },
+    { name: "RB Heating & Gas Services",     trade: "gas engineer", website: "https://rbheatingandgas.co.uk" },
   ] as { name: string; trade: string; website: string; email?: string }[];
 
   let totalFound = 0, totalWithEmail = 0;
