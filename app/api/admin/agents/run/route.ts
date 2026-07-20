@@ -226,7 +226,7 @@ async function runSender(supabase: SupabaseClient) {
   for (const lead of leads) {
     if (!lead.email) continue;
     try {
-      const body = (lead.email_body ?? "").replace(/\[SIGNUP_LINK\]/g, "https://demand-pilot.vercel.app");
+      const body = (lead.email_body ?? "").replace(/\[SIGNUP_LINK\]/g, "https://quote-pilot-v1-app.vercel.app");
       await sendEmail({ to: lead.email, subject: lead.email_subject ?? "Free quoting tool for UK tradespeople", text: body });
       await supabase.from("outreach_leads").update({ status: "email_sent", email_sent_at: new Date().toISOString() }).eq("id", lead.id);
       await agentLog(supabase, "Sender", `Sent to ${lead.email}`, "success", { lead_id: lead.id });
