@@ -446,63 +446,58 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:50px
 
 <!-- CTA -->
 <style>
-.contact-form{display:flex;flex-direction:column;gap:12px;max-width:480px;margin:0 auto;text-align:left}
-.cf-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.cf-field{display:flex;flex-direction:column;gap:6px}
-.cf-label{font-family:'Syne',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-.cf-input,.cf-textarea{background:rgba(12,18,32,.8);border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:.9rem;outline:none;transition:border-color .2s,box-shadow .2s;width:100%}
-.cf-input:focus,.cf-textarea:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(0,98,255,.1)}
-.cf-textarea{resize:vertical;min-height:100px;line-height:1.6}
-.cf-submit{background:var(--accent2);color:white;border:none;border-radius:8px;padding:14px 28px;font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;letter-spacing:.04em;cursor:pointer;transition:background .2s,transform .2s;display:flex;align-items:center;justify-content:center;gap:10px;width:100%}
-.cf-submit:hover{background:#0050dd;transform:translateY(-1px)}
-.cf-submit:disabled{opacity:.6;cursor:not-allowed;transform:none}
-.cf-success{display:none;background:rgba(10,240,160,.08);border:1px solid rgba(10,240,160,.2);border-radius:12px;padding:24px;text-align:center}
-.cf-success.show{display:block}
-.cf-success-icon{font-size:2rem;margin-bottom:10px}
-.cf-success-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:var(--white);margin-bottom:6px}
-.cf-success-sub{font-size:.86rem;color:var(--muted)}
+.cta-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:540px;margin:36px auto 0;text-align:left}
+@media(max-width:600px){.cta-cards{grid-template-columns:1fr}}
+.cta-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;text-decoration:none;color:inherit;transition:border-color .2s,transform .2s,box-shadow .2s;display:flex;flex-direction:column;gap:10px}
+.cta-card:hover{border-color:var(--accent2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,98,255,.15)}
+.cta-card-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.cta-card-icon.blue{background:rgba(0,98,255,.15)}
+.cta-card-icon.green{background:rgba(10,240,160,.12)}
+.cta-card-label{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.cta-card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--white)}
+.cta-card-sub{font-size:.82rem;color:var(--muted);line-height:1.5}
+.cta-email-big{display:inline-flex;align-items:center;gap:10px;background:var(--accent2);color:white;text-decoration:none;border-radius:10px;padding:16px 28px;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;letter-spacing:.02em;margin-top:32px;transition:background .2s,transform .2s}
+.cta-email-big:hover{background:#0050dd;transform:translateY(-2px)}
+.cta-divider{display:flex;align-items:center;gap:14px;margin:28px auto;max-width:400px;color:var(--muted);font-size:.78rem}
+.cta-divider::before,.cta-divider::after{content:'';flex:1;height:1px;background:var(--border)}
 </style>
 
 <section class="cta" id="cta">
   <div class="cta-glow"></div>
   <div class="cta-inner">
     <div class="hero-badge" style="display:inline-flex;margin-bottom:24px"><span class="badge-dot"></span>Taking on new clients now</div>
-    <h2 class="cta-title reveal">Got a project<br><em>in mind?</em></h2>
-    <p class="cta-sub reveal reveal-delay-1">Fill in the form and I'll get back to you same day. No sales pitch — just a straight conversation about what you actually need.</p>
+    <h2 class="cta-title reveal">Let's talk<br><em>about your project.</em></h2>
+    <p class="cta-sub reveal reveal-delay-1">No sales pitch. Just a straight conversation about what you need and whether I can help. I reply same day.</p>
 
-    <div id="contact-success" class="cf-success reveal reveal-delay-2" style="display:none">
-      <div class="cf-success-icon">✅</div>
-      <div class="cf-success-title">Message sent!</div>
-      <div class="cf-success-sub">I'll get back to you today. Check your inbox.</div>
+    <a class="cta-email-big reveal reveal-delay-1" href="mailto:pryeralex492@gmail.com?subject=Website%20Enquiry&body=Hi%20Alex%2C%0A%0AI%27m%20interested%20in%20getting%20a%20website%20built.%20Here%27s%20a%20bit%20about%20what%20I%20need%3A%0A%0A">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
+      Email Alex
+    </a>
+
+    <div class="cta-divider reveal reveal-delay-2">or reach out directly</div>
+
+    <div class="cta-cards reveal reveal-delay-2">
+      <a class="cta-card" href="mailto:pryeralex492@gmail.com">
+        <div class="cta-card-icon blue">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0062ff" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
+        </div>
+        <div>
+          <div class="cta-card-label">Email</div>
+          <div class="cta-card-title">alex@demandpilot.co.uk</div>
+          <div class="cta-card-sub">I reply within a few hours, usually same day.</div>
+        </div>
+      </a>
+      <a class="cta-card" href="tel:+447700000000">
+        <div class="cta-card-icon green">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0af0a0" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.68A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        </div>
+        <div>
+          <div class="cta-card-label">Phone</div>
+          <div class="cta-card-title">+44 7368 607850</div>
+          <div class="cta-card-sub">Mon–Fri, 9am–6pm UK time.</div>
+        </div>
+      </a>
     </div>
-
-    <form class="contact-form reveal reveal-delay-2" action="/api/contact" method="POST">
-      <div class="cf-row">
-        <div class="cf-field">
-          <label class="cf-label" for="cf-name">Your name</label>
-          <input class="cf-input" id="cf-name" name="name" type="text" placeholder="Mike Reynolds" required>
-        </div>
-        <div class="cf-field">
-          <label class="cf-label" for="cf-email">Your email</label>
-          <input class="cf-input" id="cf-email" name="email" type="email" placeholder="mike@business.co.uk" required>
-        </div>
-      </div>
-      <div class="cf-field">
-        <label class="cf-label" for="cf-msg">What do you need?</label>
-        <textarea class="cf-textarea" id="cf-msg" name="message" placeholder="Tell me a bit about your business and what you're looking for — or just say hi." required></textarea>
-      </div>
-      <button class="cf-submit" type="submit">
-        Send Message
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </button>
-    </form>
-    <p style="margin-top:16px;font-size:.78rem;color:var(--muted);text-align:center">Or email directly: <a href="mailto:pryeralex492@gmail.com" style="color:#60a5fa;text-decoration:none">alex@demandpilot.co.uk</a></p>
-    <script>
-      if(window.location.search.includes('sent=1')){
-        document.querySelector('.contact-form').style.display='none';
-        document.getElementById('contact-success').style.display='block';
-      }
-    </script>
   </div>
 </section>
 
@@ -541,36 +536,6 @@ function toggleAcc(header) {
   if (!isOpen) { item.classList.add('open'); body.classList.add('open'); }
 }
 
-async function sendEnquiry(e) {
-  e.preventDefault();
-  const name = document.getElementById('cf-name').value.trim();
-  const email = document.getElementById('cf-email').value.trim();
-  const msg  = document.getElementById('cf-msg').value.trim();
-  const btn  = document.getElementById('cf-btn');
-
-  btn.disabled = true;
-  btn.innerHTML = 'Sending…';
-
-  try {
-    // Send via Formspree (free tier — 50 submissions/month)
-    const res = await fetch('/api/contact', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, message: msg })
-    });
-
-    if (res.ok) {
-      document.getElementById('contact-form').style.display = 'none';
-      document.getElementById('contact-success').classList.add('show');
-    } else {
-      throw new Error('failed');
-    }
-  } catch(err) {
-    alert('Error: ' + err);
-    btn.disabled = false;
-    btn.innerHTML = 'Send Message <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
-  }
-}
 </script>
 </body>
 </html>
