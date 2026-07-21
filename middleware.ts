@@ -9,8 +9,13 @@ export function middleware(request: NextRequest) {
   if (request.nextUrl.pathname === "/" && isMarketingDomain) {
     return NextResponse.rewrite(new URL("/index.html", request.url));
   }
+
+  // Redirect old web-design URL to new one
+  if (request.nextUrl.pathname === "/web-design.html") {
+    return NextResponse.redirect(new URL("/design.html", request.url));
+  }
 }
 
 export const config = {
-  matcher: ["/"],
+  matcher: ["/", "/web-design.html"],
 };
