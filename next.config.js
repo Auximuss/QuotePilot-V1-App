@@ -6,6 +6,11 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async rewrites() {
+    return [
+      { source: '/', destination: '/index.html' },
+    ];
+  },
   webpack: (config, { webpack, nextRuntime }) => {
     // @next/env (bundled into Edge middleware by Next.js) references __dirname,
     // which doesn't exist in the Edge runtime. Polyfill it to prevent the
