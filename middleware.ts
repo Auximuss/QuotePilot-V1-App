@@ -10,12 +10,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(new URL("/index.html", request.url));
   }
 
-  // Redirect old web-design URL to new one
-  if (request.nextUrl.pathname === "/web-design.html") {
-    return NextResponse.redirect(new URL("/design.html", request.url));
+  // Serve web design page via serverless route (bypasses CDN static cache)
+  if (
+    request.nextUrl.pathname === "/web-design.html" ||
+    request.nextUrl.pathname === "/design.html"
+  ) {
+    return NextResponse.rewrite(new URL("/webdesign", request.url));
   }
 }
 
 export const config = {
-  matcher: ["/", "/web-design.html"],
+  matcher: ["/", "/web-design.html", "/design.html"],
 };
