@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     }
 
     if (!name || !email || !message) {
-      return NextResponse.redirect(new URL("/design.html?error=1", req.url));
+      return NextResponse.redirect(new URL("/webdesign?error=1", req.url));
     }
 
     const res = await fetch("https://api.resend.com/emails", {
@@ -36,11 +36,11 @@ export async function POST(req: Request) {
     });
 
     if (!res.ok) {
-      return NextResponse.redirect(new URL("/design.html?error=1", req.url));
+      return NextResponse.redirect(new URL("/webdesign?error=1", req.url));
     }
 
-    return NextResponse.redirect(new URL("/design.html?sent=1", req.url));
+    return NextResponse.redirect(new URL("/webdesign?sent=1", req.url));
   } catch (e: any) {
-    return NextResponse.redirect(new URL("/design.html?error=1", req.url));
+    return NextResponse.redirect(new URL("/webdesign?error=1", req.url));
   }
 }
