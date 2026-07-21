@@ -559,10 +559,8 @@ async function sendEnquiry(e) {
     } else {
       throw new Error('failed');
     }
-  } catch {
-    // Fallback: open mailto with the details filled in
-    const body = `Hi Alex,%0A%0AMy name is ${encodeURIComponent(name)} and my email is ${encodeURIComponent(email)}.%0A%0A${encodeURIComponent(msg)}`;
-    window.location.href = `mailto:pryeralex492@gmail.com?subject=Website enquiry from ${encodeURIComponent(name)}&body=${body}`;
+  } catch(err) {
+    alert('Error: ' + err);
     btn.disabled = false;
     btn.innerHTML = 'Send Message <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
   }
