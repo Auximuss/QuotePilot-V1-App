@@ -496,7 +496,7 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:50px
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </button>
     </form>
-    <p style="margin-top:16px;font-size:.78rem;color:var(--muted);text-align:center">Or email directly: <a href="mailto:alex@demandpilot.co.uk" style="color:#60a5fa;text-decoration:none">alex@demandpilot.co.uk</a></p>
+    <p style="margin-top:16px;font-size:.78rem;color:var(--muted);text-align:center">Or email directly: <a href="mailto:pryeralex492@gmail.com" style="color:#60a5fa;text-decoration:none">alex@demandpilot.co.uk</a></p>
   </div>
 </section>
 
@@ -547,7 +547,7 @@ async function sendEnquiry(e) {
 
   try {
     // Send via Formspree (free tier — 50 submissions/month)
-    const res = await fetch('https://formspree.io/f/xeoqnjey', {
+    const res = await fetch('https://formspree.io/f/xren1rok', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({ name, email, message: msg, _replyto: email, _subject: `Website enquiry from ${name}` })
@@ -562,7 +562,7 @@ async function sendEnquiry(e) {
   } catch {
     // Fallback: open mailto with the details filled in
     const body = `Hi Alex,%0A%0AMy name is ${encodeURIComponent(name)} and my email is ${encodeURIComponent(email)}.%0A%0A${encodeURIComponent(msg)}`;
-    window.location.href = `mailto:alex@demandpilot.co.uk?subject=Website enquiry from ${encodeURIComponent(name)}&body=${body}`;
+    window.location.href = `mailto:pryeralex492@gmail.com?subject=Website enquiry from ${encodeURIComponent(name)}&body=${body}`;
     btn.disabled = false;
     btn.innerHTML = 'Send Message <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
   }
