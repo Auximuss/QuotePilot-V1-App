@@ -470,33 +470,39 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:50px
     <h2 class="cta-title reveal">Got a project<br><em>in mind?</em></h2>
     <p class="cta-sub reveal reveal-delay-1">Fill in the form and I'll get back to you same day. No sales pitch — just a straight conversation about what you actually need.</p>
 
-    <div id="contact-success" class="cf-success reveal reveal-delay-2">
+    <div id="contact-success" class="cf-success reveal reveal-delay-2" style="display:none">
       <div class="cf-success-icon">✅</div>
       <div class="cf-success-title">Message sent!</div>
       <div class="cf-success-sub">I'll get back to you today. Check your inbox.</div>
     </div>
 
-    <form class="contact-form reveal reveal-delay-2" id="contact-form" onsubmit="sendEnquiry(event)">
+    <form class="contact-form reveal reveal-delay-2" action="/api/contact" method="POST">
       <div class="cf-row">
         <div class="cf-field">
           <label class="cf-label" for="cf-name">Your name</label>
-          <input class="cf-input" id="cf-name" type="text" placeholder="Mike Reynolds" required>
+          <input class="cf-input" id="cf-name" name="name" type="text" placeholder="Mike Reynolds" required>
         </div>
         <div class="cf-field">
           <label class="cf-label" for="cf-email">Your email</label>
-          <input class="cf-input" id="cf-email" type="email" placeholder="mike@business.co.uk" required>
+          <input class="cf-input" id="cf-email" name="email" type="email" placeholder="mike@business.co.uk" required>
         </div>
       </div>
       <div class="cf-field">
         <label class="cf-label" for="cf-msg">What do you need?</label>
-        <textarea class="cf-textarea" id="cf-msg" placeholder="Tell me a bit about your business and what you're looking for — or just say hi." required></textarea>
+        <textarea class="cf-textarea" id="cf-msg" name="message" placeholder="Tell me a bit about your business and what you're looking for — or just say hi." required></textarea>
       </div>
-      <button class="cf-submit" type="submit" id="cf-btn">
+      <button class="cf-submit" type="submit">
         Send Message
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </button>
     </form>
     <p style="margin-top:16px;font-size:.78rem;color:var(--muted);text-align:center">Or email directly: <a href="mailto:pryeralex492@gmail.com" style="color:#60a5fa;text-decoration:none">alex@demandpilot.co.uk</a></p>
+    <script>
+      if(window.location.search.includes('sent=1')){
+        document.querySelector('.contact-form').style.display='none';
+        document.getElementById('contact-success').style.display='block';
+      }
+    </script>
   </div>
 </section>
 

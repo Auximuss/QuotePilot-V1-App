@@ -2,10 +2,22 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
-    const { name, email, message } = await req.json();
+    // Handle both JSON and form-encoded submissions
+    const contentType = req.headers.get("content-type") ?? "";
+    let name: string, email: string, message: string;
+
+    if (contentType.includes("application/json")) {
+      const body = await req.json();
+      name = body.name; email = body.email; message = body.message;
+    } else {
+      const form = await req.formData();
+      name = form.get("name") as string;
+      email = form.get("email") as string;
+      message = form.get("message") as string;
+    }
 
     if (!name || !email || !message) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+      return NextResponse.redirect(new URL("/design.html?error=1", req.url));
     }
 
     const res = await fetch("https://api.resend.com/emails", {
@@ -24,12 +36,11 @@ export async function POST(req: Request) {
     });
 
     if (!res.ok) {
-      const err = await res.text();
-      return NextResponse.json({ error: err }, { status: 500 });
+      return NextResponse.redirect(new URL("/design.html?error=1", req.url));
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.redirect(new URL("/design.html?sent=1", req.url));
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.redirect(new URL("/design.html?error=1", req.url));
   }
 }
