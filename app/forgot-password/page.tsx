@@ -30,7 +30,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="bp-grid flex min-h-screen flex-col justify-center px-6 py-10">
-      <button onClick={() => router.push("/")} className="mb-8 text-xs text-textDim">
+      <button onClick={() => router.push("/login")} className="mb-8 text-xs text-textDim">
         ← Back to log in
       </button>
 

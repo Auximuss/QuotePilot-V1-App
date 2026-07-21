@@ -236,7 +236,7 @@ function SettingsPageInner() {
     } catch (err: any) { alert("Failed: " + err.message); setUpgradeLoading(null); }
   }
 
-  async function signOut() { await sb().auth.signOut(); router.push("/"); }
+  async function signOut() { await sb().auth.signOut(); router.push("/login"); }
 
   const TABS: { id: Tab; label: string; icon: string }[] = [
     { id: "business", label: "Business", icon: "M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10" },

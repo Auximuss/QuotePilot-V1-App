@@ -1,0 +1,2555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demand Pilot — Web Design That Works</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Instrument+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#05080f;--surface:#0c1220;--surface2:#111927;--border:#1e2d42;
+  --accent:#0af0a0;--accent2:#0062ff;--accent3:#ff3d6b;--accent4:#f59e0b;
+  --text:#e8eef7;--muted:#5a6a82;--white:#ffffff;--card:#0f1c2e;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{cursor:none;background:var(--bg);color:var(--text);font-family:'Instrument Sans',sans-serif;font-weight:300;overflow-x:hidden;position:relative}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px}
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:18px 60px;display:flex;align-items:center;justify-content:space-between;background:rgba(5,8,15,.88);backdrop-filter:blur(20px);border-bottom:1px solid rgba(30,45,66,.5);transition:background .3s}
+.nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:var(--white);text-decoration:none;display:flex;align-items:center;gap:10px}
+.logo-mark{width:32px;height:32px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-mark svg{width:18px;height:18px;color:var(--bg)}
+.nav-links{display:flex;align-items:center;gap:34px}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.84rem;font-weight:400;letter-spacing:.03em;transition:color .2s}
+.nav-links a:hover{color:var(--text)}
+.nav-cta{background:var(--accent)!important;color:var(--bg)!important;padding:10px 22px;border-radius:6px;font-weight:600!important;font-size:.82rem!important;letter-spacing:.05em;transition:background .2s,transform .2s!important}
+.nav-cta:hover{background:#08d488!important;transform:translateY(-1px)!important}
+.nav-portal{border:1px solid var(--border)!important;color:var(--text)!important;padding:10px 22px;border-radius:6px;font-size:.82rem!important;transition:border-color .2s,color .2s!important}
+.nav-portal:hover{border-color:var(--accent)!important;color:var(--accent)!important}
+#hero{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:120px 60px 80px}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(10,240,160,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(10,240,160,.03) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black,transparent)}
+.hero-glow{position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(0,98,255,.15),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+.hero-glow2{position:absolute;width:400px;height:400px;background:radial-gradient(circle,rgba(10,240,160,.1),transparent 70%);top:30%;right:10%;pointer-events:none}
+.hero-inner{max-width:1100px;width:100%;position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(10,240,160,.1);border:1px solid rgba(10,240,160,.25);border-radius:100px;padding:6px 16px;font-size:.72rem;font-family:'Syne',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:28px}
+.badge-dot{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
+.hero-title{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(2.8rem,5vw,4.5rem);line-height:1.05;margin-bottom:24px;letter-spacing:-.02em}
+.hero-title .line-1{display:block;color:var(--white)}
+.hero-title .line-2{display:block;color:var(--accent);font-family:'Instrument Serif',serif;font-style:italic;font-weight:400}
+.hero-title .line-3{display:block;color:var(--white)}
+.hero-desc{color:var(--muted);font-size:1.05rem;line-height:1.8;margin-bottom:40px;max-width:460px}
+.hero-actions{display:flex;gap:16px;align-items:center}
+.btn-primary{background:var(--accent);color:var(--bg);padding:14px 32px;border-radius:8px;text-decoration:none;font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;letter-spacing:.04em;display:inline-flex;align-items:center;gap:10px;transition:transform .2s,box-shadow .2s;border:none;cursor:pointer}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(10,240,160,.3)}
+.btn-secondary{color:var(--text);padding:14px 24px;text-decoration:none;font-size:.9rem;display:inline-flex;align-items:center;gap:8px;opacity:.7;transition:opacity .2s}
+.btn-secondary:hover{opacity:1}
+.hero-visual{position:relative;display:flex;justify-content:center;align-items:center}
+.browser-mockup{width:100%;max-width:480px;background:var(--surface);border-radius:16px;border:1px solid var(--border);overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.6);animation:float 6s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.browser-bar{background:var(--surface2);padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.browser-dots{display:flex;gap:6px}
+.browser-dot{width:10px;height:10px;border-radius:50%}
+.browser-dot:nth-child(1){background:#ff5f57}.browser-dot:nth-child(2){background:#febc2e}.browser-dot:nth-child(3){background:#28c840}
+.browser-url{flex:1;background:var(--card);border-radius:6px;padding:6px 14px;font-size:.72rem;color:var(--muted);margin-left:10px}
+.browser-content{padding:24px}
+.mock-hero-bar{height:90px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:10px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:white;letter-spacing:.05em}
+.mock-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+.mock-card{height:55px;background:var(--card);border-radius:8px;border:1px solid var(--border);animation:shimmer 3s ease-in-out infinite}
+.mock-card:nth-child(2){animation-delay:.3s}.mock-card:nth-child(3){animation-delay:.6s}
+@keyframes shimmer{0%,100%{opacity:.6}50%{opacity:1}}
+.mock-text-block{height:36px;background:var(--card);border-radius:6px;border:1px solid var(--border)}
+.hero-stats{display:flex;gap:32px;margin-top:46px}
+.stat-num{font-family:'Syne',sans-serif;font-weight:800;font-size:1.8rem;color:var(--white);line-height:1}
+.stat-label{font-size:.75rem;color:var(--muted);margin-top:4px;letter-spacing:.05em}
+section{padding:100px 60px}
+.section-inner{max-width:1100px;margin:0 auto}
+.section-label{font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:var(--accent);margin-bottom:16px}
+.section-title{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(2rem,4vw,3rem);line-height:1.1;color:var(--white);margin-bottom:16px;letter-spacing:-.02em}
+.section-title em{font-family:'Instrument Serif',serif;font-style:italic;font-weight:400;color:var(--accent)}
+.section-sub{color:var(--muted);font-size:1rem;line-height:1.8;max-width:560px}
+.marquee-section{padding:28px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden;background:var(--surface)}
+.marquee-track{display:flex;gap:60px;animation:marquee 22s linear infinite;white-space:nowrap}
+.marquee-item{display:flex;align-items:center;gap:12px;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0}
+.marquee-dot{width:5px;height:5px;background:var(--accent);border-radius:50%;flex-shrink:0}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+#process{background:var(--surface)}
+.process-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin-top:60px}
+.process-step{background:var(--card);padding:36px 28px;position:relative;overflow:hidden;transition:background .3s}
+.process-step:hover{background:var(--surface2)}
+.process-step::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent2),var(--accent));transform:scaleX(0);transform-origin:left;transition:transform .4s ease}
+.process-step:hover::before{transform:scaleX(1)}
+.step-num{font-family:'Syne',sans-serif;font-weight:800;font-size:3.5rem;color:rgba(10,240,160,.08);line-height:1;margin-bottom:20px}
+.step-icon{width:44px;height:44px;background:rgba(10,240,160,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.step-icon svg{width:22px;height:22px;color:var(--accent)}
+.step-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;color:var(--white);margin-bottom:10px}
+.step-desc{font-size:.87rem;color:var(--muted);line-height:1.75}
+.step-time{display:inline-block;margin-top:14px;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);background:rgba(10,240,160,.08);padding:4px 12px;border-radius:100px}
+#packages{background:var(--bg)}
+.packages-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:60px}
+.package-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:36px;position:relative;transition:transform .3s,box-shadow .3s,border-color .3s;overflow:hidden}
+.package-card:hover{transform:translateY(-6px);box-shadow:0 24px 60px rgba(0,0,0,.4);border-color:rgba(10,240,160,.2)}
+.package-card.featured{border-color:var(--accent);background:linear-gradient(135deg,rgba(10,240,160,.07),var(--card))}
+.featured-badge{position:absolute;top:20px;right:20px;background:var(--accent);color:var(--bg);font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 12px;border-radius:100px}
+.pkg-tier{font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.pkg-name{font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;color:var(--white);margin-bottom:8px}
+.pkg-desc{font-size:.84rem;color:var(--muted);line-height:1.7;margin-bottom:24px}
+.pkg-price{margin-bottom:26px}
+.pkg-price .currency{font-size:1.3rem;vertical-align:top;margin-top:6px;display:inline-block;color:var(--muted)}
+.pkg-price .amount{font-family:'Syne',sans-serif;font-weight:800;font-size:2.8rem;color:var(--white);line-height:1}
+.pkg-features{list-style:none;margin-bottom:28px}
+.pkg-features li{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,45,66,.5);font-size:.86rem;color:var(--text)}
+.pkg-features li:last-child{border:none}
+.pkg-features li svg{width:15px;height:15px;color:var(--accent);flex-shrink:0;margin-top:2px}
+.pkg-features li.no svg{color:var(--border)}.pkg-features li.no{color:var(--muted)}
+.btn-pkg{width:100%;padding:13px;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:.86rem;letter-spacing:.05em;cursor:pointer;transition:all .2s}
+.btn-pkg-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-pkg-outline:hover{border-color:var(--accent);color:var(--accent)}
+.btn-pkg-solid{background:var(--accent);color:var(--bg);border:none}
+.btn-pkg-solid:hover{background:#08d488;transform:translateY(-1px);box-shadow:0 8px 24px rgba(10,240,160,.3)}
+#reviews{background:var(--surface)}
+.reviews-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:60px}
+.review-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:30px;transition:transform .3s,border-color .3s}
+.review-card:hover{transform:translateY(-4px);border-color:rgba(10,240,160,.2)}
+.review-stars{color:#f59e0b;font-size:.88rem;margin-bottom:14px;letter-spacing:2px}
+.review-text{font-family:'Instrument Serif',serif;font-style:italic;font-size:1rem;color:var(--text);line-height:1.7;margin-bottom:22px}
+.reviewer{display:flex;align-items:center;gap:12px}
+.reviewer-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:.82rem;color:white;flex-shrink:0}
+.reviewer-name{font-family:'Syne',sans-serif;font-weight:600;font-size:.86rem;color:var(--white)}
+.reviewer-biz{font-size:.76rem;color:var(--muted);margin-top:2px}
+#expect{background:var(--bg)}
+.expect-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:60px;align-items:start}
+.timeline-visual{display:flex;flex-direction:column}
+.tv-item{display:flex;gap:20px;padding:22px 0;position:relative}
+.tv-item::after{content:'';position:absolute;left:17px;top:44px;bottom:0;width:1px;background:var(--border)}
+.tv-item:last-child::after{display:none}
+.tv-dot{width:34px;height:34px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--bg)}
+.tv-item.active .tv-dot{border-color:var(--accent);background:rgba(10,240,160,.1)}
+.tv-dot svg{width:14px;height:14px;color:var(--muted)}
+.tv-item.active .tv-dot svg{color:var(--accent)}
+.tv-week{font-size:.68rem;color:var(--accent);font-family:'Syne',sans-serif;font-weight:600;letter-spacing:.12em;margin-bottom:3px;text-transform:uppercase}
+.tv-content h4{font-family:'Syne',sans-serif;font-weight:700;font-size:.92rem;color:var(--white);margin-bottom:4px}
+.tv-content p{font-size:.84rem;color:var(--muted);line-height:1.65}
+.accordion{display:flex;flex-direction:column;gap:10px}
+.acc-item{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .2s}
+.acc-item.open{border-color:rgba(10,240,160,.3)}
+.acc-header{padding:18px 22px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-family:'Syne',sans-serif;font-weight:600;font-size:.9rem;color:var(--text)}
+.acc-arrow{transition:transform .3s;color:var(--muted)}
+.acc-item.open .acc-arrow{transform:rotate(45deg);color:var(--accent)}
+.acc-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.acc-body.open{max-height:200px;padding:0 22px 18px}
+.acc-body p{font-size:.86rem;color:var(--muted);line-height:1.75}
+#cta{background:linear-gradient(135deg,#0a1628,#051020);position:relative;overflow:hidden;text-align:center;padding:120px 60px}
+.cta-glow{position:absolute;width:800px;height:400px;background:radial-gradient(ellipse,rgba(10,240,160,.1),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+.cta-inner{position:relative;z-index:2;max-width:680px;margin:0 auto}
+.cta-title{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(2.2rem,5vw,3.8rem);color:var(--white);line-height:1.05;margin-bottom:18px;letter-spacing:-.02em}
+.cta-title em{font-family:'Instrument Serif',serif;font-style:italic;color:var(--accent);font-weight:400}
+.cta-sub{color:var(--muted);font-size:1rem;margin-bottom:36px;line-height:1.8}
+.cta-form{display:flex;gap:12px;max-width:460px;margin:0 auto}
+.cta-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:13px 16px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:.9rem;outline:none;transition:border-color .2s}
+.cta-input:focus{border-color:var(--accent)}
+footer{background:var(--surface);border-top:1px solid var(--border);padding:60px}
+.footer-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:50px}
+.footer-brand p{font-size:.84rem;color:var(--muted);line-height:1.8;max-width:250px;margin-top:14px}
+.footer-col h4{font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--text);margin-bottom:18px}
+.footer-col a{display:block;color:var(--muted);text-decoration:none;font-size:.84rem;margin-bottom:9px;transition:color .2s}
+.footer-col a:hover{color:var(--accent)}
+.footer-bottom{max-width:1100px;margin:36px auto 0;padding-top:22px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:.76rem;color:var(--muted)}
+.reveal{opacity:1;transform:none;transition:opacity .65s ease,transform .65s ease}.reveal.hidden{opacity:0;transform:translateY(24px)}
+.reveal.animate{opacity:0;transform:translateY(24px)}.reveal.animate.visible{opacity:1;transform:translateY(0)}
+.reveal-delay-1{transition-delay:.1s}.reveal-delay-2{transition-delay:.2s}.reveal-delay-3{transition-delay:.3s}
+.toast{position:fixed;bottom:28px;right:28px;background:var(--surface);border:1px solid var(--accent);border-radius:10px;padding:12px 20px;font-family:'Syne',sans-serif;font-size:.83rem;color:var(--accent);z-index:9999;transform:translateY(70px);opacity:0;transition:all .3s;pointer-events:none;max-width:300px}
+.toast.show{transform:translateY(0);opacity:1}
+@media(max-width:900px){
+  nav{padding:14px 20px}.nav-links{display:none}
+  #hero{padding:90px 20px 60px}.hero-inner{grid-template-columns:1fr}.hero-visual{display:none}
+  section{padding:60px 20px}
+  .process-grid,.packages-grid,.reviews-grid{grid-template-columns:1fr}
+  .expect-grid{grid-template-columns:1fr}
+  .footer-inner{grid-template-columns:1fr 1fr}
+}
+<!-- OVERLAY BASE STYLES + PORTAL/ADMIN CSS -->
+<style>
+.overlay{
+  visibility:hidden;
+  opacity:0;
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  min-width:100vw;min-height:100vh;
+  background:rgba(0,0,0,.85);
+  backdrop-filter:blur(12px);
+  z-index:9999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  pointer-events:none;
+  transition:opacity .25s,visibility .25s;
+}
+.overlay.active{
+  visibility:visible;
+  opacity:1;
+  pointer-events:all;
+}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;position:relative;animation:slideUp .35s ease;margin:0 auto;max-height:88vh;overflow-y:auto;flex-shrink:0}
+@keyframes slideUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+.panel-header{padding:22px 30px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:10;border-radius:20px 20px 0 0;flex-shrink:0}
+.panel-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;color:var(--white);display:flex;align-items:center;gap:10px}
+.panel-close{width:34px;height:34px;background:var(--card);border:1px solid var(--border);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:color .2s,border-color .2s;font-size:1rem;flex-shrink:0;line-height:1}
+.panel-close:hover{color:var(--accent);border-color:var(--accent)}
+.panel-body{padding:26px 30px}
+.form-tabs{display:flex;gap:4px;background:var(--card);border-radius:10px;padding:4px;margin-bottom:8px}
+.form-tab{flex:1;padding:8px;border-radius:8px;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-weight:600;font-size:.78rem;transition:all .2s;background:transparent;color:var(--muted)}
+.form-tab.active{background:var(--accent);color:var(--bg)}
+.login-hint{font-size:.76rem;color:var(--muted);padding:10px 14px;background:rgba(10,240,160,.05);border-radius:8px;border:1px solid rgba(10,240,160,.12);line-height:1.7}
+.login-hint strong{color:var(--accent)}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:2px}
+.form-label{font-family:'Syne',sans-serif;font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.form-input{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:11px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:.9rem;outline:none;transition:border-color .2s;width:100%}
+.form-input:focus{border-color:var(--accent)}
+.form-select{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:.88rem;outline:none;width:100%;cursor:pointer;transition:border-color .2s}
+.form-select:focus{border-color:var(--accent)}
+.sbadge{display:inline-flex;align-items:center;gap:7px;background:rgba(10,240,160,.12);border:1px solid rgba(10,240,160,.3);color:var(--accent);border-radius:100px;padding:5px 14px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.sbadge-dot{width:7px;height:7px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite;flex-shrink:0}
+
+/* ── CLIENT PORTAL ── */
+.client-dash{display:flex;flex-direction:column;gap:18px}
+.cwb{background:linear-gradient(135deg,rgba(0,98,255,.15),rgba(10,240,160,.08));border:1px solid rgba(10,240,160,.2);border-radius:14px;padding:22px 26px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.cwb h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1.35rem;color:var(--white);margin-bottom:4px}
+.cwb p{color:var(--muted);font-size:.86rem}
+.cwb-pct{font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;color:var(--accent);text-align:right;line-height:1}
+.cwb-pct-label{font-size:.7rem;color:var(--muted);text-align:right;margin-top:2px}
+.ctopbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.ctb{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 22px}
+.ctb.hl{background:linear-gradient(135deg,rgba(10,240,160,.07),rgba(0,98,255,.04));border-color:rgba(10,240,160,.18)}
+.ctb-label{font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.ctb-val{font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;color:var(--white);line-height:1}
+.ctb-sub{font-size:.76rem;color:var(--muted);margin-top:3px}
+.c-tabs{display:flex;gap:4px;background:var(--card);border-radius:10px;padding:4px;border:1px solid var(--border)}
+.ctab{padding:9px 18px;border-radius:7px;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-weight:600;font-size:.79rem;background:transparent;color:var(--muted);transition:all .2s}
+.ctab.active{background:var(--surface2);color:var(--white);border:1px solid var(--border)}
+.c-section{display:none}.c-section.active{display:block}
+.prog-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px}
+.prog-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.prog-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;color:var(--white)}
+.prog-pct{font-family:'Syne',sans-serif;font-weight:800;font-size:1.7rem;color:var(--accent)}
+.prog-bar-wrap{height:7px;background:var(--surface2);border-radius:100px;overflow:hidden;margin:14px 0 22px}
+.prog-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:100px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.ms-list{display:flex;flex-direction:column;gap:9px}
+.ms{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:10px}
+.ms.done{background:rgba(10,240,160,.05);border:1px solid rgba(10,240,160,.15)}
+.ms.active-m{background:rgba(0,98,255,.07);border:1px solid rgba(0,98,255,.2)}
+.ms.pending{background:var(--surface2);border:1px solid transparent;opacity:.55}
+.ms-icon{width:29px;height:29px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.78rem;flex-shrink:0}
+.ms-icon.done{background:rgba(10,240,160,.15);color:var(--accent)}
+.ms-icon.active-m{background:rgba(0,98,255,.15);color:var(--accent2)}
+.ms-icon.pending{background:var(--card);color:var(--muted)}
+.ms-info{flex:1}.ms-info h4{font-family:'Syne',sans-serif;font-weight:600;font-size:.85rem;color:var(--white)}
+.ms-info p{font-size:.75rem;color:var(--muted);margin-top:2px}
+.ms-date{font-size:.72rem;color:var(--muted);white-space:nowrap}
+.msg-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+.msg-area{background:var(--surface2);border-radius:10px;padding:14px;height:210px;overflow-y:auto;display:flex;flex-direction:column;gap:9px;margin-bottom:10px}
+.msg{padding:10px 13px;border-radius:8px;font-size:.83rem;line-height:1.6;max-width:84%}
+.msg.us{background:rgba(0,98,255,.12);border:1px solid rgba(0,98,255,.2);color:var(--text);align-self:flex-start}
+.msg.them{background:rgba(10,240,160,.1);border:1px solid rgba(10,240,160,.2);color:var(--text);align-self:flex-end}
+.msg-sender{color:var(--accent2);font-weight:600;font-size:.69rem;margin-bottom:3px;font-family:'Syne',sans-serif;letter-spacing:.05em}
+.msg-time{font-size:.67rem;color:var(--muted);margin-top:3px;opacity:.7}
+.msg-row{display:flex;gap:8px}
+.msg-inp{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 13px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:.85rem;outline:none;transition:border-color .2s}
+.msg-inp:focus{border-color:var(--accent)}
+.msg-btn{background:var(--accent);color:var(--bg);border:none;border-radius:8px;padding:10px 18px;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;font-size:.79rem;transition:background .2s;white-space:nowrap}
+.msg-btn:hover{background:#08d488}
+.files-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+.file-list{display:flex;flex-direction:column;gap:8px}
+.file-row{display:flex;align-items:center;gap:12px;padding:11px 13px;background:var(--surface2);border-radius:8px;border:1px solid transparent;transition:border-color .2s,background .2s;cursor:pointer}
+.file-row:hover{border-color:var(--border);background:var(--card)}
+.file-ico{font-size:1rem;width:28px;text-align:center}
+.file-name{flex:1;font-size:.83rem;color:var(--text)}
+.file-size{font-size:.71rem;color:var(--muted)}
+.file-dl{color:var(--accent);font-size:.75rem;font-family:'Syne',sans-serif;font-weight:600;padding:3px 9px;border-radius:5px;background:rgba(10,240,160,.08)}
+.file-dl:hover{background:rgba(10,240,160,.15)}
+.inv-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+.inv-table{background:var(--surface2);border-radius:10px;overflow:hidden;margin-bottom:16px}
+.inv-row{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
+.inv-row:last-child{border:none}
+.inv-label{font-size:.83rem;color:var(--muted)}
+.inv-val{font-family:'Syne',sans-serif;font-weight:600;font-size:.87rem;color:var(--white)}
+.inv-paid{color:var(--accent)}.inv-due{color:var(--accent4)}
+
+/* ── ADMIN ── */
+.adm-wrap{display:grid;grid-template-columns:210px 1fr;gap:18px;min-height:540px}
+.adm-sidebar{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:2px}
+.adm-sidebar-title{font-family:'Syne',sans-serif;font-weight:800;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.adm-nav{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;cursor:pointer;font-size:.83rem;color:var(--muted);transition:all .2s;border:none;background:transparent;width:100%;text-align:left;font-family:'Instrument Sans',sans-serif}
+.adm-nav:hover,.adm-nav.active{background:rgba(10,240,160,.08);color:var(--accent)}
+.adm-nav svg{width:14px;height:14px;flex-shrink:0}
+.adm-sec{display:none}.adm-sec.active{display:flex;flex-direction:column;gap:14px}
+.adm-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+.adm-stat{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:16px 18px}
+.adm-stat-label{font-size:.7rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.adm-stat-val{font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;color:var(--white);line-height:1}
+.adm-stat-change{font-size:.71rem;margin-top:3px}
+.up{color:var(--accent)}.dn{color:var(--accent3)}.neu{color:var(--accent4)}
+.adm-table-wrap{background:var(--card);border:1px solid var(--border);border-radius:13px;overflow:hidden}
+.adm-table-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.adm-table-head h3{font-family:'Syne',sans-serif;font-weight:700;font-size:.92rem;color:var(--white)}
+.adm-actions{display:flex;gap:7px;align-items:center}
+.adm-search{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 11px;color:var(--text);font-size:.81rem;outline:none;width:170px;font-family:'Instrument Sans',sans-serif}
+.adm-search:focus{border-color:var(--accent)}
+.btn-a{padding:7px 14px;border-radius:7px;font-family:'Syne',sans-serif;font-weight:700;font-size:.76rem;cursor:pointer;transition:all .2s;border:none;letter-spacing:.04em}
+.btn-a-primary{background:var(--accent);color:var(--bg)}.btn-a-primary:hover{background:#08d488}
+.btn-a-ghost{background:var(--surface2);color:var(--muted);border:1px solid var(--border)!important}.btn-a-ghost:hover{color:var(--text);border-color:var(--text)!important}
+.adm-tbl{width:100%;border-collapse:collapse;font-size:.81rem}
+.adm-tbl th{padding:10px 18px;text-align:left;font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);background:var(--surface2)}
+.adm-tbl td{padding:12px 18px;border-bottom:1px solid rgba(30,45,66,.4);color:var(--text);vertical-align:middle}
+.adm-tbl tr:last-child td{border:none}
+.adm-tbl tr:hover td{background:rgba(10,240,160,.02)}
+.ts{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:100px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.06em;cursor:pointer;transition:all .2s;user-select:none}
+.ts.live{background:rgba(10,240,160,.1);color:var(--accent)}
+.ts.build{background:rgba(0,98,255,.12);color:#60a5fa}
+.ts.review{background:rgba(245,158,11,.12);color:var(--accent4)}
+.ts.disco{background:rgba(139,92,246,.12);color:#a78bfa}
+.ts.pause{background:rgba(255,61,107,.1);color:var(--accent3)}
+.tpb{width:66px;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle}
+.tpf{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:3px}
+.btn-sm{padding:5px 10px;border-radius:6px;font-family:'Syne',sans-serif;font-weight:600;font-size:.71rem;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:var(--surface2);color:var(--muted)}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm.del:hover{border-color:var(--accent3);color:var(--accent3)}
+.rev-card{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:20px}
+.rev-card h3{font-family:'Syne',sans-serif;font-weight:700;font-size:.92rem;color:var(--white);margin-bottom:18px}
+.bar-chart{display:flex;align-items:flex-end;gap:9px;height:110px}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
+.bar{width:100%;background:linear-gradient(180deg,var(--accent),var(--accent2));border-radius:5px 5px 0 0;cursor:pointer;position:relative;transition:filter .2s}
+.bar:hover{filter:brightness(1.25)}
+.bar-tip{position:absolute;top:-26px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-family:'Syne',sans-serif;font-size:.67rem;color:var(--white);white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none}
+.bar:hover .bar-tip{opacity:1}
+.bar-label{font-size:.68rem;color:var(--muted);font-family:'Syne',sans-serif}
+.adm-msg-layout{display:grid;grid-template-columns:200px 1fr;background:var(--card);border:1px solid var(--border);border-radius:13px;overflow:hidden;height:360px}
+.adm-msg-sb{border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+.adm-msg-sb-head{padding:13px 15px;border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;color:var(--white);flex-shrink:0}
+.adm-ci{padding:11px 15px;cursor:pointer;border-bottom:1px solid rgba(30,45,66,.3);transition:background .15s}
+.adm-ci:hover,.adm-ci.active{background:rgba(10,240,160,.06)}
+.adm-ci-name{font-family:'Syne',sans-serif;font-weight:600;font-size:.81rem;color:var(--white);display:flex;align-items:center;justify-content:space-between}
+.adm-ci-last{font-size:.73rem;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.unread{background:var(--accent3);color:white;border-radius:100px;padding:1px 6px;font-size:.63rem;font-family:'Syne',sans-serif;font-weight:700}
+.adm-msg-main{display:flex;flex-direction:column;flex:1}
+.adm-msg-head{padding:13px 17px;border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-weight:700;font-size:.86rem;color:var(--white);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.adm-msg-area{flex:1;padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:9px}
+.adm-msg-foot{padding:11px 15px;border-top:1px solid var(--border);display:flex;gap:7px;flex-shrink:0}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.setting-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px}
+.setting-card h4{font-family:'Syne',sans-serif;font-weight:700;font-size:.86rem;color:var(--white);margin-bottom:13px;display:flex;align-items:center;gap:8px}
+.setting-card h4 svg{width:14px;height:14px;color:var(--accent)}
+.srow{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(30,45,66,.35)}
+.srow:last-child{border:none}
+.srow-label{font-size:.82rem;color:var(--text)}
+.toggle{width:34px;height:19px;background:var(--border);border-radius:100px;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--accent)}
+.toggle::after{content:'';position:absolute;width:13px;height:13px;background:white;border-radius:50%;top:3px;left:3px;transition:transform .2s}
+.toggle.on::after{transform:translateX(15px)}
+/* EDIT MODAL */
+.edit-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);z-index:3000;align-items:center;justify-content:center;padding:20px}
+.edit-modal.active{display:flex}
+.edit-panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:560px;animation:slideUp .3s ease;overflow:hidden}
+.edit-ph{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.edit-ph h3{font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;color:var(--white)}
+.edit-pb{padding:22px 24px;display:flex;flex-direction:column;gap:13px;max-height:65vh;overflow-y:auto}
+.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.edit-foot{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:9px;justify-content:flex-end}
+.prog-slider{width:100%;accent-color:var(--accent);cursor:pointer;height:4px;margin-top:4px}
+@media(max-width:900px){
+  .adm-wrap{grid-template-columns:1fr}.adm-sidebar{display:none}
+  .adm-stats{grid-template-columns:1fr 1fr}
+  .ctopbar{grid-template-columns:1fr 1fr}
+  .adm-msg-layout{grid-template-columns:1fr;height:auto}.adm-msg-sb{display:none}
+  .settings-grid,.edit-grid{grid-template-columns:1fr}
+}
+
+/* ── LIVE DASHBOARD ── */
+.dash-stage-head{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px;background:var(--card);border:1px solid var(--border);position:relative;z-index:1;cursor:default;transition:border-color .2s}
+.dash-stage-head:hover{border-color:rgba(10,240,160,.3)}
+.dsh-icon{font-size:1.4rem}
+.dsh-label{font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;text-align:center}
+.dsh-count{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;color:var(--accent);line-height:1}
+.dash-col{background:var(--card);border:1px solid var(--border);border-top:none;min-height:120px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.dash-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;transition:border-color .2s,transform .2s;cursor:default}
+.dash-card:hover{border-color:rgba(10,240,160,.25);transform:translateY(-2px)}
+.dash-card-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;color:var(--white);margin-bottom:3px}
+.dash-card-biz{font-size:.7rem;color:var(--muted)}
+.dash-card-pkg{display:inline-block;margin-top:6px;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;padding:2px 7px;border-radius:100px;background:rgba(10,240,160,.1);color:var(--accent)}
+.dash-card-bar{height:3px;background:var(--border);border-radius:100px;margin-top:8px;overflow:hidden}
+.dash-card-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:100px}
+
+/* ── ROI CALCULATOR ── */
+.roi-range{width:100%;-webkit-appearance:none;appearance:none;height:5px;background:var(--border);border-radius:100px;outline:none;cursor:pointer}
+.roi-range::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:var(--accent);border-radius:50%;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.roi-range::-webkit-slider-thumb:hover{transform:scale(1.2);box-shadow:0 0 0 4px rgba(10,240,160,.2)}
+.roi-range::-moz-range-thumb{width:18px;height:18px;background:var(--accent);border-radius:50%;cursor:pointer;border:none}
+.roi-slider-group{padding-bottom:4px}
+
+/* ── AUDIT TOOL ── */
+.audit-step-tag{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:100px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:600;border:1px solid var(--border);background:var(--card);color:var(--muted);transition:all .4s}
+.audit-step-tag.done{background:rgba(10,240,160,.1);border-color:rgba(10,240,160,.3);color:var(--accent)}
+.audit-step-tag.active{background:rgba(0,98,255,.1);border-color:rgba(0,98,255,.3);color:#60a5fa;animation:auditPulse 1s infinite}
+@keyframes auditPulse{0%,100%{opacity:1}50%{opacity:.5}}
+.audit-score-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center;transition:border-color .3s}
+.audit-score-num{font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;line-height:1;margin-bottom:4px}
+.audit-score-label{font-size:.7rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.audit-score-bar{height:4px;background:var(--surface2);border-radius:100px;overflow:hidden;margin-top:10px}
+.audit-score-fill{height:100%;border-radius:100px;transition:width 1s ease}
+.audit-rec{display:flex;gap:12px;padding:12px 14px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--border)}
+.audit-rec.high{border-left-color:var(--accent3)}
+.audit-rec.med{border-left-color:var(--accent4)}
+.audit-rec.low{border-left-color:var(--accent)}
+.audit-rec-icon{font-size:1rem;flex-shrink:0;margin-top:1px}
+.audit-rec-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;color:var(--white);margin-bottom:3px}
+.audit-rec-text{font-size:.78rem;color:var(--muted);line-height:1.6}
+
+/* ── PROPOSAL BUILDER ── */
+.prop-step{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;transition:border-color .3s}
+.prop-step:focus-within{border-color:rgba(10,240,160,.3)}
+.prop-step-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px}
+.prop-step-num{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;color:rgba(10,240,160,.25);line-height:1;min-width:32px}
+.prop-step-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;color:var(--white)}
+.prop-step-sub{font-size:.78rem;color:var(--muted);margin-top:2px}
+.prop-options{display:flex;gap:8px;flex-wrap:wrap}
+.prop-opt{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:.82rem;cursor:pointer;transition:all .2s;font-family:'Instrument Sans',sans-serif;user-select:none}
+.prop-opt:hover{border-color:rgba(10,240,160,.3);color:var(--text)}
+.prop-opt.selected{border-color:var(--accent);background:rgba(10,240,160,.08);color:var(--accent);font-weight:500}
+.prop-line{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(30,45,66,.4);font-size:.84rem}
+.prop-line:last-child{border:none}
+.prop-line-label{color:var(--muted)}
+.prop-line-val{font-family:'Syne',sans-serif;font-weight:600;color:var(--text)}
+.prop-tl-item{display:flex;align-items:center;gap:10px;font-size:.8rem;color:var(--muted)}
+.prop-tl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.prop-feat-tag{padding:4px 10px;border-radius:100px;font-size:.72rem;font-family:'Syne',sans-serif;font-weight:600;background:rgba(10,240,160,.08);border:1px solid rgba(10,240,160,.15);color:var(--accent)}
+
+
+@media(max-width:900px){
+  #roi-calculator .section-inner > div[style*="grid-template-columns:1fr 1fr"],
+  #proposal-builder .section-inner > div[style*="grid-template-columns:1fr 1fr"]{
+    grid-template-columns:1fr!important;
+  }
+  #audit-tool #auditScoreCards{grid-template-columns:repeat(3,1fr)!important}
+  .dash-stage-head .dsh-label{font-size:.6rem}
+  .dash-stage-head .dsh-icon{font-size:1rem}
+  #live-dashboard .section-inner > div > div:first-child,
+  #live-dashboard #dashboardWrap > div:first-child{grid-template-columns:repeat(3,1fr)!important}
+  #live-dashboard #dashboardWrap > div:nth-child(2){grid-template-columns:repeat(3,1fr)!important}
+}
+</style>
+
+</head>
+<body>
+<!-- MAIN SITE HTML (body content) -->
+<div class="toast" id="toast"></div>
+
+<div id="cur" style="position:fixed;width:12px;height:12px;background:#0af0a0;border-radius:50%;pointer-events:none;z-index:99999;left:0;top:0;transition:transform .15s,background .15s;transform:translate(-50%,-50%);will-change:transform"></div>
+<div id="cur2" style="position:fixed;width:36px;height:36px;border:1.5px solid rgba(10,240,160,.45);border-radius:50%;pointer-events:none;z-index:99998;left:0;top:0;transform:translate(-50%,-50%);will-change:transform"></div>
+<div id="mainSite" style="display:block">
+<nav id="mainNav">
+  <a href="#" class="nav-logo">
+    <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+    Demand Pilot
+  </a>
+  <div class="nav-links">
+    <a href="#process">Process</a><a href="#packages">Packages</a><a href="#reviews">Reviews</a><a href="#expect">FAQ</a>
+    <a href="#app">App</a><a href="#live-dashboard">Live</a>
+    <a href="#roi-calculator">ROI</a>
+    <a href="#audit-tool">Audit</a>
+    <a href="#proposal-builder">Proposal</a>
+    <a href="#" class="nav-portal" onclick="openLogin();return false">Client Portal</a>
+    <a href="#cta" class="nav-cta">Get a Quote</a>
+  </div>
+</nav>
+
+<style>
+.dp-hero{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:130px 60px 80px;background:var(--bg)}
+.dp-hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(10,240,160,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(10,240,160,.04) 1px,transparent 1px);background-size:50px 50px;mask-image:radial-gradient(ellipse 90% 90% at 50% 50%,black,transparent)}
+.dp-hero-orb1{position:absolute;width:700px;height:700px;background:radial-gradient(circle,rgba(0,98,255,.12),transparent 70%);top:50%;left:30%;transform:translate(-50%,-50%);pointer-events:none}
+.dp-hero-orb2{position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(10,240,160,.08),transparent 70%);top:20%;right:5%;pointer-events:none}
+.dp-hero-inner{max-width:1200px;width:100%;position:relative;z-index:2;text-align:center}
+.dp-hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(10,240,160,.08);border:1px solid rgba(10,240,160,.2);border-radius:100px;padding:8px 20px;font-size:.72rem;font-family:'Syne',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:32px}
+.dp-hero-badge-dot{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite}
+.dp-hero-title{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(3rem,6vw,5.5rem);line-height:1.02;letter-spacing:-.03em;margin-bottom:18px;color:var(--white)}
+.dp-hero-title .grad{background:linear-gradient(135deg,#0af0a0,#0062ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.dp-hero-sub{color:var(--muted);font-size:1.1rem;line-height:1.8;max-width:600px;margin:0 auto 52px}
+.dp-products{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:52px;text-align:left}
+.dp-prod-card{border-radius:24px;padding:32px;position:relative;overflow:hidden;transition:transform .3s,box-shadow .3s}
+.dp-prod-card:hover{transform:translateY(-6px)}
+.dp-prod-app{background:linear-gradient(135deg,#0a1628 0%,#0d2040 100%);border:1px solid rgba(10,240,160,.2);box-shadow:0 24px 60px rgba(0,0,0,.4),inset 0 1px 0 rgba(10,240,160,.1)}
+.dp-prod-app:hover{box-shadow:0 40px 80px rgba(0,0,0,.5),0 0 60px rgba(10,240,160,.08),inset 0 1px 0 rgba(10,240,160,.15)}
+.dp-prod-web{background:linear-gradient(135deg,#0a1020 0%,#0c1830 100%);border:1px solid rgba(0,98,255,.2);box-shadow:0 24px 60px rgba(0,0,0,.4),inset 0 1px 0 rgba(0,98,255,.1)}
+.dp-prod-web:hover{box-shadow:0 40px 80px rgba(0,0,0,.5),0 0 60px rgba(0,98,255,.08),inset 0 1px 0 rgba(0,98,255,.15)}
+.dp-prod-tag{display:inline-flex;align-items:center;gap:7px;border-radius:100px;padding:5px 14px;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:20px}
+.dp-prod-tag-app{background:rgba(10,240,160,.1);border:1px solid rgba(10,240,160,.25);color:var(--accent)}
+.dp-prod-tag-web{background:rgba(0,98,255,.1);border:1px solid rgba(0,98,255,.25);color:#60a5fa}
+.dp-prod-name{font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;color:var(--white);margin-bottom:10px;line-height:1.1}
+.dp-prod-desc{font-size:.88rem;color:var(--muted);line-height:1.75;margin-bottom:24px}
+.dp-prod-features{display:flex;flex-direction:column;gap:9px;margin-bottom:26px}
+.dp-prod-feat{display:flex;align-items:center;gap:10px;font-size:.82rem;color:var(--text)}
+.dp-prod-feat-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.dp-feat-dot-app{background:var(--accent)}
+.dp-feat-dot-web{background:#60a5fa}
+.dp-prod-cta-app{display:inline-flex;align-items:center;gap:9px;background:var(--accent);color:var(--bg);padding:12px 26px;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:.86rem;letter-spacing:.04em;text-decoration:none;transition:all .2s}
+.dp-prod-cta-app:hover{background:#08d488;transform:translateY(-1px);box-shadow:0 10px 30px rgba(10,240,160,.3)}
+.dp-prod-cta-web{display:inline-flex;align-items:center;gap:9px;background:var(--accent2);color:white;padding:12px 26px;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:.86rem;letter-spacing:.04em;text-decoration:none;transition:all .2s}
+.dp-prod-cta-web:hover{background:#0050dd;transform:translateY(-1px);box-shadow:0 10px 30px rgba(0,98,255,.3)}
+.dp-prod-visual-app{position:absolute;bottom:-10px;right:20px;opacity:.15;font-size:8rem;pointer-events:none;user-select:none;line-height:1}
+.dp-prod-visual-web{position:absolute;bottom:-10px;right:20px;opacity:.1;font-size:8rem;pointer-events:none;user-select:none;line-height:1}
+.dp-hero-stats{display:flex;justify-content:center;gap:48px}
+.dp-stat{text-align:center}
+.dp-stat-num{font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;color:var(--white);line-height:1}
+.dp-stat-label{font-size:.74rem;color:var(--muted);margin-top:5px;letter-spacing:.05em}
+@media(max-width:900px){.dp-hero{padding:90px 20px 60px}.dp-products{grid-template-columns:1fr}.dp-hero-stats{gap:24px}.dp-hero-title{font-size:2.6rem}}
+</style>
+
+<section class="dp-hero" id="hero">
+  <div class="dp-hero-grid"></div>
+  <div class="dp-hero-orb1"></div>
+  <div class="dp-hero-orb2"></div>
+  <div class="dp-hero-inner">
+    <div class="dp-hero-badge"><span class="dp-hero-badge-dot"></span>Two products. One mission. Based in Nottingham.</div>
+    <h1 class="dp-hero-title">
+      Built for UK trade.<br>
+      <span class="grad">Built to grow.</span>
+    </h1>
+    <p class="dp-hero-sub">Demand Pilot creates the tools UK tradespeople and businesses need to win more work — an AI quoting app and websites that actually convert.</p>
+
+    <div class="dp-products reveal">
+      <!-- APP CARD -->
+      <div class="dp-prod-card dp-prod-app">
+        <div class="dp-prod-tag dp-prod-tag-app"><span style="width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite"></span>App — Free to Try</div>
+        <div class="dp-prod-name">AI Quoting App<br>for Tradespeople</div>
+        <p class="dp-prod-desc">Describe a job by voice. AI builds a professional quote in seconds. Send it to your customer via WhatsApp.</p>
+        <div class="dp-prod-features">
+          <div class="dp-prod-feat"><span class="dp-prod-feat-dot dp-feat-dot-app"></span>Voice-to-quote in 60 seconds</div>
+          <div class="dp-prod-feat"><span class="dp-prod-feat-dot dp-feat-dot-app"></span>GPT-powered AI quote builder</div>
+          <div class="dp-prod-feat"><span class="dp-prod-feat-dot dp-feat-dot-app"></span>Send via WhatsApp instantly</div>
+          <div class="dp-prod-feat"><span class="dp-prod-feat-dot dp-feat-dot-app"></span>100% free — no card needed</div>
+        </div>
+        <a href="https://quote-pilot-v1-app.vercel.app" class="dp-prod-cta-app" target="_blank">Try the App Free →</a>
+        <div class="dp-prod-visual-app">🎙️</div>
+      </div>
+
+      <!-- WEB DESIGN CARD -->
+      <div class="dp-prod-card dp-prod-web">
+        <div class="dp-prod-tag dp-prod-tag-web">Web Design — from £349</div>
+        <div class="dp-prod-name">Websites That<br>Convert & Grow</div>
+        <p class="dp-prod-desc">Custom, fast, SEO-ready websites for UK businesses. All copy written for you. Live in 14 days or less.</p>
+        <div class="dp-prod-features">
+          <div class="dp-prod-feat"><span class="dp-prod-feat-dot dp-feat-dot-web"></span>Full custom design — no templates</div>
+          <div class="dp-prod-feat"><span class="dp-prod-feat-dot dp-feat-dot-web"></span>All copy written for you</div>
+          <div class="dp-prod-feat"><span class="dp-prod-feat-dot dp-feat-dot-web"></span>Mobile-first, SEO-ready</div>
+          <div class="dp-prod-feat"><span class="dp-prod-feat-dot dp-feat-dot-web"></span>14-day delivery, 100% satisfaction</div>
+        </div>
+        <a href="#packages" class="dp-prod-cta-web">See Packages →</a>
+        <div class="dp-prod-visual-web">🌐</div>
+      </div>
+    </div>
+
+    <div class="dp-hero-stats reveal">
+      <div class="dp-stat"><div class="dp-stat-num">60s</div><div class="dp-stat-label">To generate a quote</div></div>
+      <div class="dp-stat"><div class="dp-stat-num">14d</div><div class="dp-stat-label">Website live date</div></div>
+      <div class="dp-stat"><div class="dp-stat-num">100%</div><div class="dp-stat-label">Satisfaction rate</div></div>
+      <div class="dp-stat"><div class="dp-stat-num">Free</div><div class="dp-stat-label">App to try</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="marquee-section">
+  <div class="marquee-track">
+    <div class="marquee-item"><span class="marquee-dot"></span>Custom Design</div><div class="marquee-item"><span class="marquee-dot"></span>Mobile First</div><div class="marquee-item"><span class="marquee-dot"></span>SEO Ready</div><div class="marquee-item"><span class="marquee-dot"></span>Lightning Fast</div><div class="marquee-item"><span class="marquee-dot"></span>Nottingham Based</div><div class="marquee-item"><span class="marquee-dot"></span>No Hidden Fees</div><div class="marquee-item"><span class="marquee-dot"></span>14-Day Delivery</div><div class="marquee-item"><span class="marquee-dot"></span>Free Copywriting</div><div class="marquee-item"><span class="marquee-dot"></span>AI Quoting App</div><div class="marquee-item"><span class="marquee-dot"></span>Voice to WhatsApp</div>
+    <div class="marquee-item"><span class="marquee-dot"></span>Custom Design</div><div class="marquee-item"><span class="marquee-dot"></span>Mobile First</div><div class="marquee-item"><span class="marquee-dot"></span>SEO Ready</div><div class="marquee-item"><span class="marquee-dot"></span>Lightning Fast</div><div class="marquee-item"><span class="marquee-dot"></span>Nottingham Based</div><div class="marquee-item"><span class="marquee-dot"></span>No Hidden Fees</div><div class="marquee-item"><span class="marquee-dot"></span>14-Day Delivery</div><div class="marquee-item"><span class="marquee-dot"></span>Free Copywriting</div>
+  </div>
+</div>
+
+
+<style>
+/* ── PHONE MOCKUP ── */
+.phone-wrap{position:relative;display:flex;justify-content:center;align-items:flex-start}
+.phone-frame{width:290px;background:#0a0a14;border-radius:44px;padding:14px;border:2px solid #1e2d42;box-shadow:0 0 0 1px #0d1824,0 60px 120px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05);position:relative;flex-shrink:0}
+.phone-notch{width:100px;height:30px;background:#0a0a14;border-radius:0 0 18px 18px;margin:0 auto 10px;position:relative;z-index:2;border-bottom:1px solid #1e2d42}
+.phone-screen{background:#05080f;border-radius:32px;overflow:hidden;min-height:500px;padding:0}
+.phone-status{display:flex;justify-content:space-between;align-items:center;padding:10px 18px 6px;font-size:.62rem;color:rgba(255,255,255,.4);font-family:'Syne',sans-serif;font-weight:600}
+.phone-app-header{padding:14px 18px;border-bottom:1px solid rgba(30,45,66,.8);display:flex;align-items:center;justify-content:space-between}
+.phone-app-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:.95rem;color:white;display:flex;align-items:center;gap:8px}
+.phone-app-logo-dot{width:26px;height:26px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.75rem;flex-shrink:0}
+.phone-app-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.phone-record-btn{background:linear-gradient(135deg,rgba(10,240,160,.15),rgba(0,98,255,.1));border:1px solid rgba(10,240,160,.3);border-radius:16px;padding:20px 16px;text-align:center;cursor:pointer}
+.phone-record-circle{width:64px;height:64px;background:linear-gradient(135deg,var(--accent),#0062ff);border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;box-shadow:0 0 0 0 rgba(10,240,160,.4);animation:recordPulse 2s infinite}
+@keyframes recordPulse{0%{box-shadow:0 0 0 0 rgba(10,240,160,.4)}70%{box-shadow:0 0 0 14px rgba(10,240,160,0)}100%{box-shadow:0 0 0 0 rgba(10,240,160,0)}}
+.phone-waveform{display:flex;align-items:center;justify-content:center;gap:3px;height:28px;margin:10px 0}
+.phone-waveform span{width:3px;background:var(--accent);border-radius:2px;animation:wave 1s ease-in-out infinite}
+.phone-waveform span:nth-child(1){animation-delay:0s;height:8px}
+.phone-waveform span:nth-child(2){animation-delay:.1s;height:18px}
+.phone-waveform span:nth-child(3){animation-delay:.2s;height:26px}
+.phone-waveform span:nth-child(4){animation-delay:.3s;height:20px}
+.phone-waveform span:nth-child(5){animation-delay:.4s;height:10px}
+.phone-waveform span:nth-child(6){animation-delay:.5s;height:22px}
+.phone-waveform span:nth-child(7){animation-delay:.6s;height:28px}
+.phone-waveform span:nth-child(8){animation-delay:.7s;height:16px}
+.phone-waveform span:nth-child(9){animation-delay:.8s;height:6px}
+.phone-waveform span:nth-child(10){animation-delay:.9s;height:14px}
+@keyframes wave{0%,100%{transform:scaleY(.4);opacity:.6}50%{transform:scaleY(1);opacity:1}}
+.phone-transcript{background:rgba(10,240,160,.05);border:1px solid rgba(10,240,160,.12);border-radius:10px;padding:10px 12px;font-size:.76rem;color:rgba(232,238,247,.7);line-height:1.6;font-style:italic}
+.phone-quote-card{background:#0c1220;border:1px solid #1e2d42;border-radius:14px;overflow:hidden}
+.phone-quote-header{padding:11px 14px;background:rgba(10,240,160,.08);border-bottom:1px solid rgba(10,240,160,.12);display:flex;align-items:center;gap:7px}
+.phone-quote-check{width:18px;height:18px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#05080f;font-weight:900;flex-shrink:0}
+.phone-quote-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;color:var(--accent)}
+.phone-quote-rows{padding:10px 14px;display:flex;flex-direction:column;gap:7px}
+.phone-quote-row{display:flex;justify-content:space-between;align-items:center;font-size:.74rem;padding:5px 0;border-bottom:1px solid rgba(30,45,66,.4)}
+.phone-quote-row:last-child{border:none;padding-top:8px}
+.phone-quote-row .lbl{color:rgba(90,106,130,.9)}
+.phone-quote-row .val{font-family:'Syne',sans-serif;font-weight:700;color:white}
+.phone-quote-row.total .val{color:var(--accent);font-size:.9rem}
+.phone-wa-btn{margin:12px 18px;background:linear-gradient(135deg,#25d366,#1a9e4e);border-radius:12px;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.phone-wa-btn span{font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;color:white}
+/* floating badges */
+.phone-badge{position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;white-space:nowrap;box-shadow:0 16px 40px rgba(0,0,0,.4);backdrop-filter:blur(20px)}
+.phone-badge-sent{left:-130px;top:120px;animation:floatBadge1 4s ease-in-out infinite}
+.phone-badge-time{right:-110px;top:60px;animation:floatBadge2 4s ease-in-out infinite .7s}
+.phone-badge-ai{right:-120px;bottom:140px;animation:floatBadge3 4s ease-in-out infinite 1.4s}
+@keyframes floatBadge1{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes floatBadge2{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes floatBadge3{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.badge-icon{font-size:1.1rem;margin-bottom:3px}
+.badge-val{font-family:'Syne',sans-serif;font-weight:800;font-size:.9rem;color:white;line-height:1}
+.badge-sub{font-size:.68rem;color:var(--muted);margin-top:1px}
+/* steps */
+.app-steps{display:flex;flex-direction:column;gap:0;margin-bottom:36px}
+.app-step{display:flex;gap:20px;position:relative;padding-bottom:32px}
+.app-step:last-child{padding-bottom:0}
+.app-step-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.app-step-num{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;flex-shrink:0;position:relative;z-index:1}
+.app-step-line{width:2px;flex:1;margin-top:4px;background:linear-gradient(to bottom,rgba(10,240,160,.3),transparent)}
+.app-step-content{padding-top:6px}
+.app-step-tag{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin-bottom:5px}
+.app-step-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.05rem;color:var(--white);margin-bottom:6px}
+.app-step-desc{font-size:.87rem;color:var(--muted);line-height:1.75}
+@media(max-width:900px){.phone-badge{display:none}.phone-frame{width:100%;max-width:280px}}
+</style>
+
+<section id="app" style="background:var(--bg);padding:110px 60px;overflow:hidden">
+  <div class="section-inner">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center">
+
+      <!-- LEFT: Steps + CTA -->
+      <div class="reveal">
+        <div class="dp-prod-tag dp-prod-tag-app" style="display:inline-flex;align-items:center;gap:7px;border-radius:100px;padding:5px 14px;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:24px;background:rgba(10,240,160,.1);border:1px solid rgba(10,240,160,.25);color:var(--accent)"><span style="width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite"></span>AI Quoting App — Free</div>
+        <h2 style="font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(2.2rem,4vw,3.4rem);color:var(--white);line-height:1.05;letter-spacing:-.03em;margin-bottom:14px">Stop losing jobs<br>to <em style="font-family:'Instrument Serif',serif;font-style:italic;font-weight:400;color:var(--accent)">slow quotes.</em></h2>
+        <p style="color:var(--muted);font-size:.95rem;line-height:1.8;margin-bottom:40px;max-width:440px">While you're writing out a quote by hand, the next tradesperson already sent theirs. Demand Pilot fixes that — voice to WhatsApp in under 60 seconds.</p>
+
+        <div class="app-steps">
+          <div class="app-step">
+            <div class="app-step-left">
+              <div class="app-step-num" style="background:rgba(10,240,160,.12);border:1px solid rgba(10,240,160,.25);color:var(--accent)">1</div>
+              <div class="app-step-line"></div>
+            </div>
+            <div class="app-step-content">
+              <div class="app-step-tag">Step 1 — Voice Input</div>
+              <div class="app-step-title">Describe the job</div>
+              <p class="app-step-desc">Tap the mic and talk about the job naturally. Materials, hours, complexity — just say it like you'd explain it to a mate. No forms, no typing.</p>
+            </div>
+          </div>
+          <div class="app-step">
+            <div class="app-step-left">
+              <div class="app-step-num" style="background:rgba(0,98,255,.12);border:1px solid rgba(0,98,255,.25);color:#60a5fa">2</div>
+              <div class="app-step-line" style="background:linear-gradient(to bottom,rgba(0,98,255,.3),transparent)"></div>
+            </div>
+            <div class="app-step-content">
+              <div class="app-step-tag" style="color:#60a5fa">Step 2 — AI Generation</div>
+              <div class="app-step-title">AI builds your quote</div>
+              <p class="app-step-desc">GPT-4 converts your voice note into a professional, itemised quote — labour, materials, call-out fees, VAT. Accurate, editable, and ready in seconds.</p>
+            </div>
+          </div>
+          <div class="app-step">
+            <div class="app-step-left">
+              <div class="app-step-num" style="background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.25);color:#25d366">3</div>
+            </div>
+            <div class="app-step-content">
+              <div class="app-step-tag" style="color:#25d366">Step 3 — Send</div>
+              <div class="app-step-title">WhatsApp it in one tap</div>
+              <p class="app-step-desc">One tap sends the finished quote directly to your customer's WhatsApp. Professional, instant, and exactly how UK tradespeople already communicate.</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px">
+          <a href="https://quote-pilot-v1-app.vercel.app" class="btn-primary" target="_blank" style="background:var(--accent);color:var(--bg)">Try Free — No Card Needed <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+        </div>
+        <div style="display:flex;gap:20px;margin-top:22px;flex-wrap:wrap">
+          <div style="font-size:.78rem;color:var(--muted);display:flex;align-items:center;gap:6px"><span style="color:var(--accent)">✓</span>30-second signup</div>
+          <div style="font-size:.78rem;color:var(--muted);display:flex;align-items:center;gap:6px"><span style="color:var(--accent)">✓</span>No credit card</div>
+          <div style="font-size:.78rem;color:var(--muted);display:flex;align-items:center;gap:6px"><span style="color:var(--accent)">✓</span>Built for UK trades</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Phone mockup -->
+      <div class="reveal reveal-delay-1">
+        <div class="phone-wrap" style="padding:40px 80px">
+          <!-- Floating badge: Sent -->
+          <div class="phone-badge phone-badge-sent">
+            <div class="badge-icon">📱</div>
+            <div class="badge-val">Quote sent!</div>
+            <div class="badge-sub">via WhatsApp</div>
+          </div>
+          <!-- Floating badge: Time -->
+          <div class="phone-badge phone-badge-time">
+            <div class="badge-icon">⚡</div>
+            <div class="badge-val">47 seconds</div>
+            <div class="badge-sub">voice to quote</div>
+          </div>
+          <!-- Floating badge: AI -->
+          <div class="phone-badge phone-badge-ai">
+            <div class="badge-icon">🤖</div>
+            <div class="badge-val">GPT-4 powered</div>
+            <div class="badge-sub">AI quote builder</div>
+          </div>
+
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <!-- Status bar -->
+              <div class="phone-status">
+                <span>9:41</span>
+                <span style="display:flex;align-items:center;gap:5px">
+                  <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="4" width="2" height="6" rx="1" opacity=".4"/><rect x="3" y="2.5" width="2" height="7.5" rx="1" opacity=".6"/><rect x="6" y="1" width="2" height="9" rx="1" opacity=".8"/><rect x="9" y="0" width="2" height="10" rx="1"/></svg>
+                  <svg width="16" height="10" viewBox="0 0 16 10" fill="none" stroke="currentColor" stroke-width="1.2"><rect x=".6" y=".6" width="13" height="8.8" rx="2"/><rect x="14" y="3" width="1.5" height="4" rx=".75" fill="currentColor" stroke="none"/><rect x="1.6" y="1.6" width="9" height="6.8" rx="1.2" fill="currentColor"/></svg>
+                </span>
+              </div>
+              <!-- App header -->
+              <div class="phone-app-header">
+                <div class="phone-app-logo">
+                  <div class="phone-app-logo-dot">⚡</div>
+                  Demand Pilot
+                </div>
+                <div style="font-size:.72rem;color:var(--muted);font-family:'Syne',sans-serif">New Quote</div>
+              </div>
+              <!-- App body -->
+              <div class="phone-app-body">
+                <!-- Record button -->
+                <div class="phone-record-btn">
+                  <div class="phone-record-circle">🎙️</div>
+                  <div class="phone-waveform">
+                    <span></span><span></span><span></span><span></span><span></span>
+                    <span></span><span></span><span></span><span></span><span></span>
+                  </div>
+                  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem;color:var(--accent);letter-spacing:.08em;margin-top:6px">RECORDING...</div>
+                </div>
+                <!-- Transcript -->
+                <div class="phone-transcript">"Bathroom radiator swap, supply and fit, about 3 hours labour, parts around £180, Beeston area..."</div>
+                <!-- Generated quote -->
+                <div class="phone-quote-card">
+                  <div class="phone-quote-header">
+                    <div class="phone-quote-check">✓</div>
+                    <div class="phone-quote-title">Quote Generated — Radiator Swap</div>
+                  </div>
+                  <div class="phone-quote-rows">
+                    <div class="phone-quote-row"><span class="lbl">Labour (3 hrs)</span><span class="val">£165</span></div>
+                    <div class="phone-quote-row"><span class="lbl">Parts & materials</span><span class="val">£180</span></div>
+                    <div class="phone-quote-row"><span class="lbl">Call-out fee</span><span class="val">£40</span></div>
+                    <div class="phone-quote-row total"><span class="lbl" style="color:white;font-family:'Syne',sans-serif;font-weight:700">Total</span><span class="val" style="color:var(--accent);font-size:.96rem">£385</span></div>
+                  </div>
+                </div>
+                <!-- WhatsApp -->
+                <div class="phone-wa-btn">
+                  <span style="font-size:1.1rem">💬</span>
+                  <span>Send via WhatsApp</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trade tags -->
+    <div style="margin-top:60px;padding-top:50px;border-top:1px solid var(--border)" class="reveal">
+      <p style="text-align:center;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:20px">Built for every UK trade</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">
+        <div style="padding:8px 20px;border-radius:100px;background:var(--card);border:1px solid var(--border);font-size:.82rem;color:var(--text)">🔧 Plumbers</div>
+        <div style="padding:8px 20px;border-radius:100px;background:var(--card);border:1px solid var(--border);font-size:.82rem;color:var(--text)">⚡ Electricians</div>
+        <div style="padding:8px 20px;border-radius:100px;background:var(--card);border:1px solid var(--border);font-size:.82rem;color:var(--text)">🏗️ Builders</div>
+        <div style="padding:8px 20px;border-radius:100px;background:var(--card);border:1px solid var(--border);font-size:.82rem;color:var(--text)">🏠 Roofers</div>
+        <div style="padding:8px 20px;border-radius:100px;background:var(--card);border:1px solid var(--border);font-size:.82rem;color:var(--text)">🔥 Gas Engineers</div>
+        <div style="padding:8px 20px;border-radius:100px;background:var(--card);border:1px solid var(--border);font-size:.82rem;color:var(--text)">🪵 Carpenters</div>
+        <div style="padding:8px 20px;border-radius:100px;background:var(--card);border:1px solid var(--border);font-size:.82rem;color:var(--text)">🖌️ Plasterers</div>
+        <div style="padding:8px 20px;border-radius:100px;background:var(--card);border:1px solid var(--border);font-size:.82rem;color:var(--text)">🪟 Glaziers</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="process">
+  <div class="section-inner">
+    <p class="section-label reveal">How we work</p>
+    <h2 class="section-title reveal reveal-delay-1">Your site, start to live,<br><em>in four steps.</em></h2>
+    <p class="section-sub reveal reveal-delay-2">No jargon. No back-and-forth hell. A clean process that gets you online fast — and looking incredible.</p>
+    <div class="process-grid">
+      <div class="process-step reveal"><div class="step-num">01</div><div class="step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="step-title">Discovery Call</div><div class="step-desc">30 minutes to understand your business, goals, and audience. This shapes everything we build.</div><span class="step-time">Day 1</span></div>
+      <div class="process-step reveal reveal-delay-1"><div class="step-num">02</div><div class="step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div><div class="step-title">Design Mockup</div><div class="step-desc">Full visual mockup in Figma within 48 hours. Unlimited revisions until you love it — before any code is written.</div><span class="step-time">Days 2–4</span></div>
+      <div class="process-step reveal reveal-delay-2"><div class="step-num">03</div><div class="step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div><div class="step-title">Build &amp; Review</div><div class="step-desc">We build your site, write all copy, set up SEO, and share a private preview link for your approval.</div><span class="step-time">Days 5–12</span></div>
+      <div class="process-step reveal reveal-delay-3"><div class="step-num">04</div><div class="step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="step-title">Launch Day</div><div class="step-desc">Go live, submit to Google, analytics live. You get a full guide so you can manage it yourself confidently.</div><span class="step-time">Day 14</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="packages">
+  <div class="section-inner">
+    <p class="section-label reveal">Pricing</p>
+    <h2 class="section-title reveal reveal-delay-1">Simple packages.<br><em>No hidden fees.</em></h2>
+    <p class="section-sub reveal reveal-delay-2">Every package includes custom design, mobile optimisation, SEO setup, and all copy written for you.</p>
+    <div class="packages-grid">
+      <div class="package-card reveal">
+        <div class="pkg-tier">Starter</div><div class="pkg-name">Launch</div>
+        <div class="pkg-desc">Perfect for sole traders and new businesses needing a sharp, professional presence fast.</div>
+        <div class="pkg-price"><span class="currency">£</span><span class="amount">349</span></div>
+        <ul class="pkg-features">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>5-page custom website</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Mobile responsive</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>All copy written for you</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Google Analytics + contact form</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>14-day delivery</li>
+          <li class="no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Blog / E-commerce</li>
+        </ul>
+        <button class="btn-pkg btn-pkg-outline" onclick="openLogin()">Get Started</button>
+      </div>
+      <div class="package-card featured reveal reveal-delay-1">
+        <div class="featured-badge">Most Popular</div>
+        <div class="pkg-tier">Growth</div><div class="pkg-name">Pro</div>
+        <div class="pkg-desc">For growing businesses ready to stand out and capture real leads from their website.</div>
+        <div class="pkg-price"><span class="currency">£</span><span class="amount">649</span></div>
+        <ul class="pkg-features">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Up to 10 pages + animations</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>All copy written for you</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Full on-page SEO</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Blog section</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Google My Business setup</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Live chat integration</li>
+        </ul>
+        <button class="btn-pkg btn-pkg-solid" onclick="openLogin()">Get Started</button>
+      </div>
+      <div class="package-card reveal reveal-delay-2">
+        <div class="pkg-tier">Enterprise</div><div class="pkg-name">Scale</div>
+        <div class="pkg-desc">Full custom build for established businesses needing a serious presence and online sales.</div>
+        <div class="pkg-price"><span class="currency">£</span><span class="amount">1,299</span></div>
+        <ul class="pkg-features">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Unlimited pages</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>E-commerce / booking system</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Full SEO audit + CRM integration</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>3 months free support</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Priority 10-day delivery</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Dedicated project manager</li>
+        </ul>
+        <button class="btn-pkg btn-pkg-outline" onclick="openLogin()">Get Started</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="reviews">
+  <div class="section-inner">
+    <p class="section-label reveal">Client reviews</p>
+    <h2 class="section-title reveal reveal-delay-1">Don't just take<br><em>our word for it.</em></h2>
+    <div class="reviews-grid">
+      <div class="review-card reveal"><div class="review-stars">★★★★★</div><div class="review-text">"Smooth, quick, and they understood our trade business immediately. The site looks genuinely premium — more enquiries in month one than the whole of last year."</div><div class="reviewer"><div class="reviewer-avatar" style="background:linear-gradient(135deg,#0062ff,#0af0a0)">MR</div><div><div class="reviewer-name">Mike Reynolds</div><div class="reviewer-biz">MR Plumbing &amp; Heating, Nottingham</div></div></div></div>
+      <div class="review-card reveal reveal-delay-1"><div class="review-stars">★★★★★</div><div class="review-text">"A young agency turned out to be a strength — fast, creative, and genuinely invested. The mockup blew me away within 48 hours of our call."</div><div class="reviewer"><div class="reviewer-avatar" style="background:linear-gradient(135deg,#ff3d6b,#ff8c42)">SC</div><div><div class="reviewer-name">Sarah Clarke</div><div class="reviewer-biz">Elara Skin Studio, Nottingham</div></div></div></div>
+      <div class="review-card reveal reveal-delay-2"><div class="review-stars">★★★★★</div><div class="review-text">"Full e-commerce site with booking — delivered on time, on budget, and better quality than agencies charging three times the price."</div><div class="reviewer"><div class="reviewer-avatar" style="background:linear-gradient(135deg,#7c3aed,#0af0a0)">JB</div><div><div class="reviewer-name">James Booth</div><div class="reviewer-biz">Booth's Outdoor Co., Nottingham</div></div></div></div>
+      <div class="review-card reveal"><div class="review-stars">★★★★★</div><div class="review-text">"They wrote all our copy — a game changer. The result read exactly like us but sharper and more persuasive. We converted 3 clients in the first week."</div><div class="reviewer"><div class="reviewer-avatar" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">LT</div><div><div class="reviewer-name">Laura Tate</div><div class="reviewer-biz">Tate &amp; Co. Solicitors, Nottingham</div></div></div></div>
+      <div class="review-card reveal reveal-delay-1"><div class="review-stars">★★★★★</div><div class="review-text">"The client portal is brilliant — I could see exactly where my project was at, message the team, and download assets. Felt like a much bigger agency."</div><div class="reviewer"><div class="reviewer-avatar" style="background:linear-gradient(135deg,#0891b2,#6366f1)">DK</div><div><div class="reviewer-name">Dev Kapoor</div><div class="reviewer-biz">Kapoor Electricals, Nottingham</div></div></div></div>
+      <div class="review-card reveal reveal-delay-2"><div class="review-stars">★★★★★</div><div class="review-text">"One revision request after launch, sorted same day. Most agencies ghost you once the invoice is paid — not these guys. Absolutely recommend."</div><div class="reviewer"><div class="reviewer-avatar" style="background:linear-gradient(135deg,#059669,#0af0a0)">HN</div><div><div class="reviewer-name">Hannah Norris</div><div class="reviewer-biz">Bloom Floral Design, Nottingham</div></div></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="expect">
+  <div class="section-inner">
+    <p class="section-label reveal">What to expect</p>
+    <h2 class="section-title reveal reveal-delay-1">Your full project,<br><em>week by week.</em></h2>
+    <div class="expect-grid">
+      <div class="reveal">
+        <div class="timeline-visual">
+          <div class="tv-item active"><div class="tv-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="tv-content"><div class="tv-week">Week 1</div><h4>Discovery &amp; Design</h4><p>Call, briefing, and full Figma mockup delivered and approved.</p></div></div>
+          <div class="tv-item active"><div class="tv-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div><div class="tv-content"><div class="tv-week">Week 2</div><h4>Build &amp; Copywrite</h4><p>Full site built. All copy written. Preview link shared.</p></div></div>
+          <div class="tv-item"><div class="tv-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="tv-content"><div class="tv-week">Launch Day</div><h4>Go Live</h4><p>Domain connected. Google submitted. Analytics live.</p></div></div>
+          <div class="tv-item"><div class="tv-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="tv-content"><div class="tv-week">Ongoing</div><h4>Support &amp; Growth</h4><p>Updates, changes, and growth add-ons available.</p></div></div>
+        </div>
+      </div>
+      <div class="accordion reveal reveal-delay-1">
+        <div class="acc-item open"><div class="acc-header" onclick="toggleAcc(this)">Do I need to write any content myself?<svg class="acc-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><div class="acc-body open"><p>No. We write all your website copy as part of every package. Just fill in our brief form and we craft everything — headlines, descriptions, about sections — in your voice.</p></div></div>
+        <div class="acc-item"><div class="acc-header" onclick="toggleAcc(this)">What if I don't like the design?<svg class="acc-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><div class="acc-body"><p>Unlimited revisions at the mockup stage before any code is written. After launch, all packages include one month of free revision requests.</p></div></div>
+        <div class="acc-item"><div class="acc-header" onclick="toggleAcc(this)">Will I be able to update it myself?<svg class="acc-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><div class="acc-body"><p>Yes. We build on platforms you can manage and provide a video tutorial for your specific site so you're never dependent on us for basic changes.</p></div></div>
+        <div class="acc-item"><div class="acc-header" onclick="toggleAcc(this)">Do you offer payment plans?<svg class="acc-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><div class="acc-body"><p>50% upfront, 50% on launch day. Scale package can be split three ways. No hidden ongoing costs — ever.</p></div></div>
+        <div class="acc-item"><div class="acc-header" onclick="toggleAcc(this)">How do I track my project?<svg class="acc-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><div class="acc-body"><p>Every client gets our Client Portal — see live progress, message us directly, download deliverables, and approve each stage. No more wondering what's happening.</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════
+     LIVE PROJECT DASHBOARD
+═══════════════════════════════════════════════ -->
+<section id="live-dashboard" style="background:var(--surface);padding:100px 60px">
+  <div class="section-inner">
+    <p class="section-label reveal">Transparency</p>
+    <h2 class="section-title reveal reveal-delay-1">Watch a website<br><em>come to life.</em></h2>
+    <p class="section-sub reveal reveal-delay-2">Every Demand Pilot project moves through five live stages. Here's a real-time look at projects currently in production.</p>
+    <div id="dashboardWrap" style="margin-top:50px">
+      <!-- Stage Headers -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-bottom:0;position:relative;overflow:hidden">
+        <div style="position:absolute;top:26px;left:10%;right:10%;height:2px;background:linear-gradient(90deg,var(--accent2),var(--accent));opacity:.3;z-index:0"></div>
+        <div class="dash-stage-head" data-stage="discovery">
+          <div class="dsh-icon">🔍</div>
+          <div class="dsh-label">Discovery</div>
+          <div class="dsh-count" id="dsc-discovery">0</div>
+        </div>
+        <div class="dash-stage-head" data-stage="design">
+          <div class="dsh-icon">🎨</div>
+          <div class="dsh-label">Design</div>
+          <div class="dsh-count" id="dsc-design">0</div>
+        </div>
+        <div class="dash-stage-head" data-stage="development">
+          <div class="dsh-icon">⚙️</div>
+          <div class="dsh-label">Development</div>
+          <div class="dsh-count" id="dsc-development">0</div>
+        </div>
+        <div class="dash-stage-head" data-stage="qa">
+          <div class="dsh-icon">🔬</div>
+          <div class="dsh-label">QA &amp; Review</div>
+          <div class="dsh-count" id="dsc-qa">0</div>
+        </div>
+        <div class="dash-stage-head" data-stage="launch">
+          <div class="dsh-icon">🚀</div>
+          <div class="dsh-label">Launched</div>
+          <div class="dsh-count" id="dsc-launch">0</div>
+        </div>
+      </div>
+      <!-- Stage Columns -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:8px;min-height:100px">
+        <div class="dash-col" id="col-discovery" style="min-height:80px"></div>
+        <div class="dash-col" id="col-design"></div>
+        <div class="dash-col" id="col-development"></div>
+        <div class="dash-col" id="col-qa"></div>
+        <div class="dash-col" id="col-launch"></div>
+      </div>
+      <!-- Stats bar -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:24px">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center">
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;color:var(--accent)" id="dash-total">0</div>
+          <div style="font-size:.74rem;color:var(--muted);margin-top:4px">Projects Total</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center">
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;color:var(--accent2)" id="dash-active">0</div>
+          <div style="font-size:.74rem;color:var(--muted);margin-top:4px">In Progress</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center">
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;color:#f59e0b" id="dash-avgdays">14</div>
+          <div style="font-size:.74rem;color:var(--muted);margin-top:4px">Avg. Days to Launch</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center">
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;color:#0af0a0" id="dash-live">0</div>
+          <div style="font-size:.74rem;color:var(--muted);margin-top:4px">Sites Live</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     ROI CALCULATOR
+═══════════════════════════════════════════════ -->
+<section id="roi-calculator" style="background:var(--bg);padding:100px 60px">
+  <div class="section-inner">
+    <p class="section-label reveal">ROI Calculator</p>
+    <h2 class="section-title reveal reveal-delay-1">See what a great website<br><em>is actually worth.</em></h2>
+    <p class="section-sub reveal reveal-delay-2">Move the sliders to match your business and see your potential return on investment from a Demand Pilot website.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:50px;align-items:start" class="reveal">
+      <!-- Inputs -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;display:flex;flex-direction:column;gap:28px">
+        <div class="roi-slider-group">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <label style="font-family:'Syne',sans-serif;font-weight:600;font-size:.85rem;color:var(--text)">Monthly Website Visitors</label>
+            <span class="roi-val" id="val-visitors" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;color:var(--accent)">500</span>
+          </div>
+          <input type="range" class="roi-range" id="slider-visitors" min="100" max="10000" value="500" step="100" oninput="calcROI()">
+          <div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);margin-top:4px"><span>100</span><span>10,000</span></div>
+        </div>
+        <div class="roi-slider-group">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <label style="font-family:'Syne',sans-serif;font-weight:600;font-size:.85rem;color:var(--text)">Current Conversion Rate</label>
+            <span class="roi-val" id="val-conv" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;color:var(--accent)">1%</span>
+          </div>
+          <input type="range" class="roi-range" id="slider-conv" min="0.5" max="10" value="1" step="0.5" oninput="calcROI()">
+          <div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);margin-top:4px"><span>0.5%</span><span>10%</span></div>
+        </div>
+        <div class="roi-slider-group">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <label style="font-family:'Syne',sans-serif;font-weight:600;font-size:.85rem;color:var(--text)">Average Customer Value</label>
+            <span class="roi-val" id="val-custval" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;color:var(--accent)">£500</span>
+          </div>
+          <input type="range" class="roi-range" id="slider-custval" min="50" max="10000" value="500" step="50" oninput="calcROI()">
+          <div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);margin-top:4px"><span>£50</span><span>£10,000</span></div>
+        </div>
+        <div class="roi-slider-group">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <label style="font-family:'Syne',sans-serif;font-weight:600;font-size:.85rem;color:var(--text)">Hours Lost on Manual Tasks / Month</label>
+            <span class="roi-val" id="val-hours" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;color:var(--accent)">10 hrs</span>
+          </div>
+          <input type="range" class="roi-range" id="slider-hours" min="2" max="80" value="10" step="2" oninput="calcROI()">
+          <div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);margin-top:4px"><span>2 hrs</span><span>80 hrs</span></div>
+        </div>
+      </div>
+      <!-- Results -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="background:linear-gradient(135deg,rgba(10,240,160,.1),rgba(0,98,255,.06));border:1px solid rgba(10,240,160,.25);border-radius:16px;padding:28px">
+          <div style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:8px">Your estimated monthly gain</div>
+          <div id="roi-total" style="font-family:'Syne',sans-serif;font-weight:800;font-size:3rem;color:white;line-height:1">£0</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-top:8px">Based on a 40% conversion improvement from a new website</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px">
+            <div style="font-size:.72rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">Extra Leads/mo</div>
+            <div id="roi-leads" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;color:var(--accent2)">+0</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px">
+            <div style="font-size:.72rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">Revenue Growth</div>
+            <div id="roi-revenue" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;color:var(--accent)">+£0</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px">
+            <div style="font-size:.72rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">Conv. Improvement</div>
+            <div id="roi-convimprove" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;color:#f59e0b">+0%</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px">
+            <div style="font-size:.72rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">Time Saved/mo</div>
+            <div id="roi-time" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;color:#a78bfa">+0 hrs</div>
+          </div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px">
+          <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px;font-family:'Syne',sans-serif;font-weight:600">Payback period on a Pro website (£649)</div>
+          <div id="roi-payback" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;color:var(--white)">—</div>
+          <div style="margin-top:12px;height:6px;background:var(--surface2);border-radius:100px;overflow:hidden">
+            <div id="roi-bar" style="height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:100px;width:0%;transition:width .8s ease"></div>
+          </div>
+        </div>
+        <a href="#cta" style="background:var(--accent);color:var(--bg);padding:14px 28px;border-radius:8px;text-decoration:none;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;display:inline-flex;align-items:center;justify-content:center;gap:10px;transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 12px 30px rgba(10,240,160,.3)'" onmouseout="this.style.transform='';this.style.boxShadow=''">Get your ROI — Start Free Consultation →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     AI WEBSITE AUDIT TOOL
+═══════════════════════════════════════════════ -->
+<section id="audit-tool" style="background:var(--surface);padding:100px 60px">
+  <div class="section-inner">
+    <p class="section-label reveal">Free Tool</p>
+    <h2 class="section-title reveal reveal-delay-1">Instant website audit.<br><em>No signup needed.</em></h2>
+    <p class="section-sub reveal reveal-delay-2">Enter your website URL and get an instant analysis of speed, SEO, accessibility, mobile-readiness and conversion opportunities.</p>
+    <div style="margin-top:50px" class="reveal">
+      <!-- URL Input -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:24px">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:260px;position:relative">
+            <div style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:.9rem;color:var(--muted)">🌐</div>
+            <input id="auditUrl" type="url" placeholder="https://yourwebsite.co.uk" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:13px 14px 13px 38px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:.9rem;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" onkeydown="if(event.key==='Enter')runAudit()">
+          </div>
+          <button onclick="runAudit()" id="auditBtn" style="background:var(--accent);color:var(--bg);padding:13px 28px;border-radius:8px;border:none;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer;white-space:nowrap;transition:background .2s,transform .2s" onmouseover="this.style.background='#08d488'" onmouseout="this.style.background='var(--accent)'">Run Free Audit →</button>
+        </div>
+        <div style="margin-top:12px;font-size:.76rem;color:var(--muted)">✓ Instant results &nbsp;·&nbsp; ✓ No login required &nbsp;·&nbsp; ✓ Powered by AI analysis</div>
+      </div>
+      <!-- Loading state -->
+      <div id="auditLoading" style="display:none;text-align:center;padding:40px">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--text);margin-bottom:12px">Analysing your website…</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap" id="auditSteps"></div>
+      </div>
+      <!-- Results -->
+      <div id="auditResults" style="display:none">
+        <div style="background:linear-gradient(135deg,rgba(0,98,255,.08),rgba(10,240,160,.04));border:1px solid rgba(10,240,160,.2);border-radius:14px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:white">Audit complete for <span id="auditSiteName" style="color:var(--accent)"></span></div>
+            <div style="font-size:.8rem;color:var(--muted);margin-top:3px">Overall score based on 5 key metrics</div>
+          </div>
+          <div style="text-align:right">
+            <div id="auditOverall" style="font-family:'Syne',sans-serif;font-weight:800;font-size:2.5rem;line-height:1;color:var(--accent)">—</div>
+            <div style="font-size:.72rem;color:var(--muted)">Overall / 100</div>
+          </div>
+        </div>
+        <!-- Score cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px" id="auditScoreCards"></div>
+        <!-- Recommendations -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;color:white;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+            💡 Top Recommendations
+            <span style="font-size:.72rem;background:rgba(10,240,160,.1);color:var(--accent);border-radius:100px;padding:2px 10px;font-weight:600">AI Generated</span>
+          </div>
+          <div id="auditRecs" style="display:flex;flex-direction:column;gap:10px"></div>
+        </div>
+        <div style="margin-top:16px;text-align:center">
+          <a href="#cta" style="background:var(--accent);color:var(--bg);padding:13px 28px;border-radius:8px;text-decoration:none;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;display:inline-flex;align-items:center;gap:8px" onmouseover="this.style.background='#08d488'" onmouseout="this.style.background='var(--accent)'">Fix these issues with Demand Pilot →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     INSTANT PROPOSAL BUILDER
+═══════════════════════════════════════════════ -->
+<section id="proposal-builder" style="background:var(--bg);padding:100px 60px">
+  <div class="section-inner">
+    <p class="section-label reveal">Build Your Project</p>
+    <h2 class="section-title reveal reveal-delay-1">Get an instant proposal.<br><em>Tailored to you.</em></h2>
+    <p class="section-sub reveal reveal-delay-2">Tell us about your project and get a detailed proposal with timeline and pricing — in seconds, not days.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:50px;align-items:start" class="reveal">
+      <!-- Builder Steps -->
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <!-- Step 1 -->
+        <div class="prop-step" id="pstep-1">
+          <div class="prop-step-head">
+            <div class="prop-step-num">01</div>
+            <div>
+              <div class="prop-step-title">Website Type</div>
+              <div class="prop-step-sub">What kind of site do you need?</div>
+            </div>
+          </div>
+          <div class="prop-options" id="popts-type">
+            <div class="prop-opt selected" data-group="type" data-val="brochure" onclick="selectProp(this,'type')">🏢 Brochure / Service Site</div>
+            <div class="prop-opt" data-group="type" data-val="ecommerce" onclick="selectProp(this,'type')">🛒 E-Commerce Store</div>
+            <div class="prop-opt" data-group="type" data-val="portfolio" onclick="selectProp(this,'type')">🎨 Portfolio / Creative</div>
+            <div class="prop-opt" data-group="type" data-val="booking" onclick="selectProp(this,'type')">📅 Booking / Appointment</div>
+            <div class="prop-opt" data-group="type" data-val="landing" onclick="selectProp(this,'type')">📣 Landing Page / Lead Gen</div>
+            <div class="prop-opt" data-group="type" data-val="saas" onclick="selectProp(this,'type')">💻 SaaS / App Marketing</div>
+          </div>
+        </div>
+        <!-- Step 2 -->
+        <div class="prop-step" id="pstep-2">
+          <div class="prop-step-head">
+            <div class="prop-step-num">02</div>
+            <div>
+              <div class="prop-step-title">Features</div>
+              <div class="prop-step-sub">Select everything you need (multi-select)</div>
+            </div>
+          </div>
+          <div class="prop-options" id="popts-features" style="flex-wrap:wrap">
+            <div class="prop-opt feat-opt" data-val="blog" onclick="toggleFeat(this)">📝 Blog</div>
+            <div class="prop-opt feat-opt" data-val="gallery" onclick="toggleFeat(this)">🖼 Gallery</div>
+            <div class="prop-opt feat-opt" data-val="contact" onclick="toggleFeat(this)">📬 Contact Form</div>
+            <div class="prop-opt feat-opt" data-val="chat" onclick="toggleFeat(this)">💬 Live Chat</div>
+            <div class="prop-opt feat-opt" data-val="seo" onclick="toggleFeat(this)">🔍 SEO Setup</div>
+            <div class="prop-opt feat-opt selected" data-val="mobile" onclick="toggleFeat(this)">📱 Mobile Optimised</div>
+            <div class="prop-opt feat-opt" data-val="analytics" onclick="toggleFeat(this)">📊 Analytics</div>
+            <div class="prop-opt feat-opt" data-val="crm" onclick="toggleFeat(this)">🔗 CRM Integration</div>
+            <div class="prop-opt feat-opt" data-val="payments" onclick="toggleFeat(this)">💳 Payment System</div>
+            <div class="prop-opt feat-opt" data-val="multilang" onclick="toggleFeat(this)">🌍 Multi-language</div>
+          </div>
+        </div>
+        <!-- Step 3 -->
+        <div class="prop-step" id="pstep-3">
+          <div class="prop-step-head">
+            <div class="prop-step-num">03</div>
+            <div>
+              <div class="prop-step-title">Timeline</div>
+              <div class="prop-step-sub">When do you need to launch?</div>
+            </div>
+          </div>
+          <div class="prop-options" id="popts-timeline">
+            <div class="prop-opt" data-group="timeline" data-val="asap" onclick="selectProp(this,'timeline')">⚡ ASAP (7-10 days)</div>
+            <div class="prop-opt selected" data-group="timeline" data-val="standard" onclick="selectProp(this,'timeline')">✅ Standard (14 days)</div>
+            <div class="prop-opt" data-group="timeline" data-val="relaxed" onclick="selectProp(this,'timeline')">🗓 Relaxed (3-4 weeks)</div>
+          </div>
+        </div>
+        <!-- Step 4 -->
+        <div class="prop-step" id="pstep-4">
+          <div class="prop-step-head">
+            <div class="prop-step-num">04</div>
+            <div>
+              <div class="prop-step-title">Support Plan</div>
+              <div class="prop-step-sub">Ongoing care after launch</div>
+            </div>
+          </div>
+          <div class="prop-options" id="popts-support">
+            <div class="prop-opt selected" data-group="support" data-val="none" onclick="selectProp(this,'support')">🚀 Launch only</div>
+            <div class="prop-opt" data-group="support" data-val="basic" onclick="selectProp(this,'support')">🛡 Basic (£75/mo)</div>
+            <div class="prop-opt" data-group="support" data-val="growth" onclick="selectProp(this,'support')">📈 Growth (£200/mo)</div>
+            <div class="prop-opt" data-group="support" data-val="full" onclick="selectProp(this,'support')">⭐ Full Service (£450/mo)</div>
+          </div>
+        </div>
+        <!-- Name/Email -->
+        <div class="prop-step" id="pstep-5">
+          <div class="prop-step-head">
+            <div class="prop-step-num">05</div>
+            <div>
+              <div class="prop-step-title">Your Details</div>
+              <div class="prop-step-sub">We'll send your proposal here</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 4px">
+            <input id="propName" placeholder="Your name" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:.88rem;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" oninput="buildProposal()">
+            <input id="propEmail" type="email" placeholder="your@email.com" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 14px;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:.88rem;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" oninput="buildProposal()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Proposal Preview -->
+      <div style="position:sticky;top:90px;max-height:90vh;overflow-y:auto">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+          <div style="background:linear-gradient(135deg,rgba(10,240,160,.1),rgba(0,98,255,.07));padding:20px 24px;border-bottom:1px solid var(--border)">
+            <div style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:4px">Live Proposal</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;color:white" id="prop-title">Brochure Website</div>
+          </div>
+          <div style="padding:22px 24px;display:flex;flex-direction:column;gap:16px">
+            <!-- Price breakdown -->
+            <div id="prop-lines" style="display:flex;flex-direction:column;gap:8px"></div>
+            <div style="border-top:1px solid var(--border);padding-top:14px;display:flex;justify-content:space-between;align-items:center">
+              <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;color:var(--text)">One-time project total</div>
+              <div id="prop-total" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.8rem;color:var(--accent)">£349</div>
+            </div>
+            <div id="prop-monthly" style="background:var(--surface2);border-radius:8px;padding:12px;font-size:.82rem;color:var(--muted);display:none">Monthly support: <strong style="color:var(--text)"></strong></div>
+            <!-- Timeline -->
+            <div style="background:var(--surface2);border-radius:10px;padding:16px">
+              <div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Estimated Timeline</div>
+              <div style="display:flex;flex-direction:column;gap:7px" id="prop-timeline"></div>
+            </div>
+            <!-- Features included -->
+            <div>
+              <div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Included</div>
+              <div id="prop-features" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+            </div>
+            <!-- Send button -->
+            <button onclick="sendProposal()" style="background:var(--accent);color:var(--bg);padding:14px;border-radius:8px;border:none;font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;cursor:pointer;width:100%;transition:background .2s,transform .2s" onmouseover="this.style.background='#08d488';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='var(--accent)';this.style.transform=''">Send Me This Proposal →</button>
+            <div id="prop-sent" style="display:none;text-align:center;padding:10px;background:rgba(10,240,160,.08);border-radius:8px;color:var(--accent);font-family:'Syne',sans-serif;font-size:.85rem;font-weight:600">✓ Proposal sent to your email!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section id="cta">
+  <div class="cta-glow"></div>
+  <div class="cta-inner">
+    <p class="section-label" style="display:flex;justify-content:center">Let's build</p>
+    <h2 class="cta-title">Ready to grow<br>your <em>trade business?</em></h2>
+    <p class="cta-sub">Whether it's the AI quoting app or a website built to convert — drop your email and we'll get back within 24 hours.</p>
+    <div class="cta-form">
+      <input type="email" class="cta-input" placeholder="your@email.com" id="ctaEmail">
+      <button class="btn-primary" onclick="submitCta(event)">Let's Talk →</button>
+    </div>
+    <p style="margin-top:12px;font-size:.75rem;color:var(--muted)">No spam. No hard sell. Just a real conversation.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a href="#" class="nav-logo"><div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>Demand Pilot</a>
+      <p>We build two things: an AI quoting app for UK tradespeople and websites that convert. Based in Nottingham.</p>
+    </div>
+    <div class="footer-col"><h4>Products</h4><a href="#app">🎙️ AI Quoting App</a><a href="#process">Web Design</a><a href="#process">Development</a><a href="#packages">Pricing</a><a href="#" onclick="openLogin();return false">Client Portal</a></div>
+    <div class="footer-col"><h4>Company</h4><a href="#">About Us</a><a href="#">Our Process</a><a href="#">Packages</a><a href="#">Contact</a><a href="#" onclick="openLogin();return false">Client Portal</a></div>
+    <div class="footer-col"><h4>Contact</h4><a href="#">hello@demandpilot.co.uk</a><a href="#">Nottingham, UK</a><a href="#">Instagram</a><a href="#">LinkedIn</a></div>
+  </div>
+  <div class="footer-bottom"><span>© 2026 Demand Pilot Ltd. All rights reserved.</span><span style="color:var(--accent)">Made in Nottingham ♥</span></div>
+</footer>
+</div><!-- end mainSite -->
+
+<!-- PORTAL PAGES (hidden until login) -->
+<div id="portalWrap" style="display:none;position:relative;z-index:1">
+
+  <!-- LOGIN PAGE -->
+  <div id="portalLogin" style="display:none;min-height:100vh;background:#05080f;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#0c1220;border:1px solid #1e2d42;border-radius:20px;width:100%;max-width:420px;overflow:hidden">
+      <div style="padding:24px 30px;border-bottom:1px solid #1e2d42;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-family:Syne,sans-serif;font-weight:800;font-size:1.15rem;color:white;display:flex;align-items:center;gap:10px">
+          <div style="width:28px;height:28px;background:#0af0a0;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#05080f" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          </div>
+          Demand Pilot Portal
+        </div>
+        <button onclick="closePortal()" style="width:32px;height:32px;background:#0f1c2e;border:1px solid #1e2d42;border-radius:8px;cursor:pointer;color:#5a6a82;font-size:1rem;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+      <div style="padding:26px 30px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;gap:4px;background:#0f1c2e;border-radius:10px;padding:4px">
+          <button id="ltab-client" onclick="switchLoginTab('client')" style="flex:1;padding:8px;border-radius:8px;border:none;cursor:pointer;font-family:Syne,sans-serif;font-weight:600;font-size:.78rem;background:#0af0a0;color:#05080f">Client</button>
+          <button id="ltab-admin" onclick="switchLoginTab('admin')" style="flex:1;padding:8px;border-radius:8px;border:none;cursor:pointer;font-family:Syne,sans-serif;font-weight:600;font-size:.78rem;background:transparent;color:#5a6a82">Admin</button>
+          <button id="ltab-owner" onclick="switchLoginTab('owner')" style="flex:1;padding:8px;border-radius:8px;border:none;cursor:pointer;font-family:Syne,sans-serif;font-weight:600;font-size:.78rem;background:transparent;color:#5a6a82">Owner</button>
+        </div>
+        <div style="font-size:.76rem;color:#5a6a82;padding:10px 14px;background:rgba(10,240,160,.05);border-radius:8px;border:1px solid rgba(10,240,160,.12);line-height:1.7">
+          Enter your credentials to access your portal.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <label style="font-family:Syne,sans-serif;font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#5a6a82">Email Address</label>
+          <input id="loginEmail" type="email" placeholder="you@example.com" style="background:#0f1c2e;border:1px solid #1e2d42;border-radius:8px;padding:11px 14px;color:#e8eef7;font-family:Instrument Sans,sans-serif;font-size:.9rem;outline:none;width:100%">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <label style="font-family:Syne,sans-serif;font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#5a6a82">Password</label>
+          <input id="loginPass" type="password" placeholder="••••••••" style="background:#0f1c2e;border:1px solid #1e2d42;border-radius:8px;padding:11px 14px;color:#e8eef7;font-family:Instrument Sans,sans-serif;font-size:.9rem;outline:none;width:100%">
+        </div>
+        <button onclick="doLogin()" style="background:#0af0a0;color:#05080f;padding:13px;border-radius:8px;font-family:Syne,sans-serif;font-weight:700;font-size:.9rem;border:none;cursor:pointer;width:100%">Sign In →</button>
+        <p id="loginError" style="color:#ff3d6b;font-size:.79rem;text-align:center;display:none">Incorrect credentials. Please try again.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLIENT DASHBOARD PAGE -->
+  <div id="portalClient" style="display:none;min-height:100vh;background:#05080f;padding:0">
+    <!-- Client nav -->
+    <div style="background:#0c1220;border-bottom:1px solid #1e2d42;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100">
+      <div style="display:flex;align-items:center;gap:10px;font-family:Syne,sans-serif;font-weight:800;font-size:1.1rem;color:white">
+        <div style="width:28px;height:28px;background:#0af0a0;border-radius:6px;display:flex;align-items:center;justify-content:center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#05080f" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        Demand Pilot — Client Portal
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="background:rgba(10,240,160,.12);border:1px solid rgba(10,240,160,.3);color:#0af0a0;border-radius:100px;padding:5px 14px;font-family:Syne,sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;display:inline-flex;align-items:center;gap:7px">
+          <span style="width:7px;height:7px;background:#0af0a0;border-radius:50%;animation:pulse 2s infinite;flex-shrink:0;display:inline-block"></span><span id="cpStatusChip">In Progress</span>
+        </div>
+        <button onclick="closePortal()" style="background:#0f1c2e;border:1px solid #1e2d42;border-radius:8px;padding:8px 16px;color:#5a6a82;font-family:Syne,sans-serif;font-size:.8rem;cursor:pointer;transition:color .2s">← Back to site</button>
+      </div>
+    </div>
+    <div style="max-width:900px;margin:0 auto;padding:32px 24px;display:flex;flex-direction:column;gap:20px">
+      <!-- Welcome -->
+      <div style="background:linear-gradient(135deg,rgba(0,98,255,.15),rgba(10,240,160,.08));border:1px solid rgba(10,240,160,.2);border-radius:14px;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;gap:20px">
+        <div>
+          <h2 id="cpWelcomeName" style="font-family:Syne,sans-serif;font-weight:800;font-size:1.4rem;color:white;margin-bottom:4px">Welcome back 👋</h2>
+          <p id="cpWelcomeSub" style="color:#5a6a82;font-size:.87rem">Loading your project…</p>
+        </div>
+        <div style="text-align:right">
+          <div id="cpPctBig" style="font-family:Syne,sans-serif;font-weight:800;font-size:2.2rem;color:#0af0a0;line-height:1">—</div>
+          <div style="font-size:.72rem;color:#5a6a82">complete</div>
+        </div>
+      </div>
+      <!-- Top cards -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+        <div style="background:#0f1c2e;border:1px solid rgba(10,240,160,.18);border-radius:12px;padding:18px 22px">
+          <div style="font-family:Syne,sans-serif;font-size:.67rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#5a6a82;margin-bottom:7px">Package</div>
+          <div id="cpPkgName" style="font-family:Syne,sans-serif;font-weight:800;font-size:1.5rem;color:white;line-height:1">—</div>
+          <div style="font-size:.76rem;color:#5a6a82;margin-top:3px">Your chosen plan</div>
+        </div>
+        <div style="background:#0f1c2e;border:1px solid #1e2d42;border-radius:12px;padding:18px 22px">
+          <div style="font-family:Syne,sans-serif;font-size:.67rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#5a6a82;margin-bottom:7px">Progress</div>
+          <div id="progPctLabel" style="font-family:Syne,sans-serif;font-weight:800;font-size:1.5rem;color:white;line-height:1">—</div>
+          <div style="font-size:.76rem;color:#5a6a82;margin-top:3px">Project completion</div>
+        </div>
+        <div style="background:#0f1c2e;border:1px solid #1e2d42;border-radius:12px;padding:18px 22px">
+          <div style="font-family:Syne,sans-serif;font-size:.67rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#5a6a82;margin-bottom:7px">Balance Due</div>
+          <div id="cpBalance" style="font-family:Syne,sans-serif;font-weight:800;font-size:1.5rem;color:#f59e0b;line-height:1">—</div>
+          <div style="font-size:.76rem;color:#5a6a82;margin-top:3px">Outstanding payment</div>
+        </div>
+      </div>
+      <!-- Tabs -->
+      <div style="display:flex;gap:4px;background:#0f1c2e;border-radius:10px;padding:4px;border:1px solid #1e2d42">
+        <button class="cptab active" onclick="switchCPTab('progress',this)" style="flex:1;padding:9px 14px;border-radius:7px;border:none;cursor:pointer;font-family:Syne,sans-serif;font-weight:600;font-size:.79rem;background:#111927;color:white">📊 Progress</button>
+        <button class="cptab" onclick="switchCPTab('messages',this)" style="flex:1;padding:9px 14px;border-radius:7px;border:none;cursor:pointer;font-family:Syne,sans-serif;font-weight:600;font-size:.79rem;background:transparent;color:#5a6a82">💬 Messages</button>
+        <button class="cptab" onclick="switchCPTab('files',this)" style="flex:1;padding:9px 14px;border-radius:7px;border:none;cursor:pointer;font-family:Syne,sans-serif;font-weight:600;font-size:.79rem;background:transparent;color:#5a6a82">📁 Files</button>
+        <button class="cptab" onclick="switchCPTab('invoice',this)" style="flex:1;padding:9px 14px;border-radius:7px;border:none;cursor:pointer;font-family:Syne,sans-serif;font-weight:600;font-size:.79rem;background:transparent;color:#5a6a82">🧾 Invoice</button>
+      </div>
+      <!-- PROGRESS TAB -->
+      <div class="cpsec active" id="cpsec-progress" style="background:#0f1c2e;border:1px solid #1e2d42;border-radius:14px;padding:24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <div style="font-family:Syne,sans-serif;font-weight:700;font-size:.95rem;color:white" id="cpProjectTitle">Your Project</div>
+          <div style="font-family:Syne,sans-serif;font-weight:800;font-size:1.7rem;color:#0af0a0" id="cpPctHeader">—</div>
+        </div>
+        <div style="height:7px;background:#111927;border-radius:100px;overflow:hidden;margin:14px 0 22px">
+          <div id="cpProgressFill" style="height:100%;background:linear-gradient(90deg,#0062ff,#0af0a0);border-radius:100px;width:0%;transition:width 1.2s cubic-bezier(.4,0,.2,1)"></div>
+        </div>
+        <div id="cpMilestoneList" style="display:flex;flex-direction:column;gap:9px"></div>
+      </div>
+      <!-- MESSAGES TAB -->
+      <div class="cpsec" id="cpsec-messages" style="display:none;background:#0f1c2e;border:1px solid #1e2d42;border-radius:14px;padding:20px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:13px"><h3 style="font-family:Syne,sans-serif;font-weight:700;font-size:.9rem;color:white">Messages</h3></div>
+        <div id="cpMsgArea" style="background:#111927;border-radius:10px;padding:14px;height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:9px;margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px">
+          <input id="cpMsgInp" placeholder="Type your message…" onkeydown="if(event.key==='Enter')sendCPMsg()" style="flex:1;background:#111927;border:1px solid #1e2d42;border-radius:8px;padding:10px 13px;color:#e8eef7;font-family:Instrument Sans,sans-serif;font-size:.85rem;outline:none">
+          <button onclick="sendCPMsg()" style="background:#0af0a0;color:#05080f;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;font-family:Syne,sans-serif;font-weight:700;font-size:.79rem">Send</button>
+        </div>
+      </div>
+      <!-- FILES TAB -->
+      <div class="cpsec" id="cpsec-files" style="display:none;background:#0f1c2e;border:1px solid #1e2d42;border-radius:14px;padding:20px">
+        <h3 style="font-family:Syne,sans-serif;font-weight:700;font-size:.9rem;color:white;margin-bottom:14px">Project Files</h3>
+        <div id="cpFileList" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+      <!-- INVOICE TAB -->
+      <div class="cpsec" id="cpsec-invoice" style="display:none;background:#0f1c2e;border:1px solid #1e2d42;border-radius:14px;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <h3 style="font-family:Syne,sans-serif;font-weight:700;font-size:.9rem;color:white">Invoice</h3>
+          <button onclick="showToast('Invoice downloaded!')" style="padding:5px 10px;border-radius:6px;font-family:Syne,sans-serif;font-weight:600;font-size:.71rem;cursor:pointer;border:1px solid #1e2d42;background:#111927;color:#5a6a82">Download PDF</button>
+        </div>
+        <div id="cpInvoiceBlock"></div>
+        <button onclick="showToast('Payment link sent to your email!')" style="background:#0af0a0;color:#05080f;padding:12px 24px;border-radius:8px;font-family:Syne,sans-serif;font-weight:700;font-size:.85rem;border:none;cursor:pointer">Pay Now →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN DASHBOARD PAGE -->
+  <div id="portalAdmin" style="display:none;min-height:100vh;background:#05080f">
+    <div style="background:#0c1220;border-bottom:1px solid #1e2d42;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100">
+      <div style="display:flex;align-items:center;gap:10px;font-family:Syne,sans-serif;font-weight:800;font-size:1.1rem;color:white">
+        <div style="width:28px;height:28px;background:#0af0a0;border-radius:6px;display:flex;align-items:center;justify-content:center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#05080f" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        Demand Pilot — Admin
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-family:Syne,sans-serif;font-size:.74rem;color:#5a6a82"><span id="admRoleLabel">Logged in as <strong style="color:#0af0a0">Admin</strong></span></span>
+        <button onclick="closePortal()" style="background:#0f1c2e;border:1px solid #1e2d42;border-radius:8px;padding:8px 16px;color:#5a6a82;font-family:Syne,sans-serif;font-size:.8rem;cursor:pointer">← Back to site</button>
+      </div>
+    </div>
+    <div style="max-width:1060px;margin:0 auto;padding:28px 24px;display:flex;gap:18px">
+      <!-- Admin sidebar -->
+      <div style="width:200px;flex-shrink:0;background:#0f1c2e;border:1px solid #1e2d42;border-radius:14px;padding:16px;height:fit-content;position:sticky;top:90px">
+        <div style="font-family:Syne,sans-serif;font-weight:800;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:#0af0a0;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #1e2d42">Navigation</div>
+        <button class="admbtn active" onclick="switchAdm('overview',this)" style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;cursor:pointer;font-size:.83rem;color:#0af0a0;background:rgba(10,240,160,.08);border:none;width:100%;text-align:left;font-family:Instrument Sans,sans-serif;margin-bottom:3px">📊 Overview</button>
+        <button class="admbtn" onclick="switchAdm('clients',this)" style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;cursor:pointer;font-size:.83rem;color:#5a6a82;background:transparent;border:none;width:100%;text-align:left;font-family:Instrument Sans,sans-serif;margin-bottom:3px">👥 All Clients</button>
+        <button class="admbtn" onclick="switchAdm('revenue',this)" style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;cursor:pointer;font-size:.83rem;color:#5a6a82;background:transparent;border:none;width:100%;text-align:left;font-family:Instrument Sans,sans-serif;margin-bottom:3px">💰 Revenue</button>
+        <button class="admbtn" onclick="switchAdm('messages',this)" style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;cursor:pointer;font-size:.83rem;color:#5a6a82;background:transparent;border:none;width:100%;text-align:left;font-family:Instrument Sans,sans-serif;margin-bottom:3px">💬 Messages</button>
+        <button class="admbtn" onclick="switchAdm('settings',this)" style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;cursor:pointer;font-size:.83rem;color:#5a6a82;background:transparent;border:none;width:100%;text-align:left;font-family:Instrument Sans,sans-serif">⚙️ Settings</button>
+        <button id="admNavAccounts" class="admbtn" onclick="switchAdm('accounts',this)" style="display:none;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;cursor:pointer;font-size:.83rem;color:#f59e0b;background:rgba(245,158,11,.08);border:none;width:100%;text-align:left;font-family:Instrument Sans,sans-serif;border-top:1px solid #1e2d42;margin-top:8px;padding-top:14px">👑 Accounts</button>
+      </div>
+      <!-- Admin main -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:14px" id="admMain">
+        <div class="adm-sec active" id="adm-overview"><div class="adm-stats" id="admStatsRow"></div><div class="adm-table-wrap"><div class="adm-table-head"><h3>Recent Projects</h3><button class="btn-a btn-a-primary" onclick="switchAdm('clients',document.querySelectorAll('.admbtn')[1])">View All →</button></div><div id="overviewTbl"></div></div></div>
+        <div class="adm-sec" id="adm-clients"><div class="adm-table-wrap"><div class="adm-table-head"><h3>All Clients <span id="clientCount" style="font-size:.73rem;color:#5a6a82;font-weight:400;margin-left:6px"></span></h3><div class="adm-actions"><input class="adm-search" placeholder="Search…" id="clientSearch" oninput="renderClients()"><button class="btn-a btn-a-primary" onclick="openEdit(null)">+ New Client</button></div></div><div id="clientsTbl"></div></div></div>
+        <div class="adm-sec" id="adm-revenue"><div class="adm-stats" id="revStatsRow"></div><div class="rev-card"><h3>Monthly Revenue</h3><div class="bar-chart" id="barChart"></div></div><div class="adm-table-wrap"><div class="adm-table-head"><h3>Invoice Summary</h3><button class="btn-a btn-a-ghost" onclick="showToast('Exporting CSV…')">Export CSV</button></div><div id="invoiceTbl"></div></div></div>
+        <div class="adm-sec" id="adm-messages"><div class="adm-msg-layout"><div class="adm-msg-sb"><div class="adm-msg-sb-head">Conversations</div><div id="chatList"></div></div><div class="adm-msg-main"><div class="adm-msg-head"><span id="admChatTitle">Select a conversation</span><button class="btn-sm" onclick="showToast('Opening portal…')">View Portal</button></div><div class="adm-msg-area" id="admMsgArea"><div style="margin:auto;text-align:center;color:#5a6a82;font-size:.83rem;padding:20px">Select a client to view messages</div></div><div class="adm-msg-foot"><input class="msg-inp" style="flex:1" placeholder="Reply to client…" id="admMsgInp" onkeydown="if(event.key==='Enter')sendAdmMsg()"><button class="msg-btn" onclick="sendAdmMsg()">Send</button></div></div></div></div>
+        <div class="adm-sec" id="adm-settings"><div class="settings-grid"><div class="setting-card"><h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:#0af0a0"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Agency Info</h4><div class="form-group" style="margin-bottom:9px"><label class="form-label">Agency Name</label><input class="form-input" value="Demand Pilot" onchange="showToast('Saved!')"></div><div class="form-group" style="margin-bottom:9px"><label class="form-label">Email</label><input class="form-input" value="hello@demandpilot.co.uk" onchange="showToast('Saved!')"></div><div class="form-group"><label class="form-label">Location</label><input class="form-input" value="Nottingham, UK" onchange="showToast('Saved!')"></div></div><div class="setting-card"><h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:#0af0a0"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Notifications</h4><div class="srow"><span class="srow-label">New client signup</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div><div class="srow"><span class="srow-label">Message received</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div><div class="srow"><span class="srow-label">Invoice paid</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div><div class="srow"><span class="srow-label">Weekly summary</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div></div><div class="setting-card"><h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:#0af0a0"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Portal Settings</h4><div class="srow"><span class="srow-label">Client messaging</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div><div class="srow"><span class="srow-label">Invoice tab visible</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div><div class="srow"><span class="srow-label">File downloads</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div><div class="srow"><span class="srow-label">Show progress %</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div></div><div class="setting-card"><h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:#0af0a0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Security</h4><div class="form-group" style="margin-bottom:9px"><label class="form-label">Current Password</label><input class="form-input" type="password" placeholder="••••••••"></div><div class="form-group" style="margin-bottom:9px"><label class="form-label">New Password</label><input class="form-input" type="password" placeholder="••••••••"></div><button class="btn-a btn-a-primary" onclick="showToast('Password updated!')">Update Password</button></div></div></div>
+
+        <!-- ACCOUNTS SECTION — Owner only -->
+        <div class="adm-sec" id="adm-accounts">
+          <div class="adm-table-wrap">
+            <div class="adm-table-head" style="background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(245,158,11,.03))">
+              <h3 style="display:flex;align-items:center;gap:8px">👑 Account Management <span style="font-size:.7rem;background:rgba(245,158,11,.15);color:#f59e0b;border-radius:100px;padding:2px 10px;font-family:Syne,sans-serif">Owner Only</span></h3>
+              <button class="btn-a" style="background:#f59e0b;color:#05080f" onclick="openNewAccount()">+ Create Account</button>
+            </div>
+            <div style="padding:12px 18px;background:rgba(245,158,11,.05);border-bottom:1px solid #1e2d42;font-size:.79rem;color:#5a6a82">
+              All user accounts. Client accounts are linked to projects. Passwords shown for setup purposes only.
+            </div>
+            <div id="accountsTbl"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end portalWrap -->
+
+<!-- EDIT CLIENT MODAL (inside admin) -->
+<div class="edit-modal" id="editModal">
+  <div class="edit-panel">
+    <div class="edit-ph"><h3 id="editTitle">Edit Client</h3><div class="panel-close" onclick="closeEdit()">✕</div></div>
+    <div class="edit-pb">
+      <input type="hidden" id="editId">
+      <div class="edit-grid">
+        <div class="form-group"><label class="form-label">Client Name</label><input class="form-input" id="eName" placeholder="Full name"></div>
+        <div class="form-group"><label class="form-label">Business</label><input class="form-input" id="eBiz" placeholder="Business name"></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="eEmail" type="email" placeholder="client@email.com"></div>
+        <div class="form-group"><label class="form-label">Package</label>
+          <select class="form-select" id="ePkg">
+            <option value="Launch">Launch — £349</option>
+            <option value="Pro">Pro — £649</option>
+            <option value="Scale">Scale — £1,299</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Status</label>
+        <select class="form-select" id="eStatus">
+          <option value="disco">Discovery</option>
+          <option value="build">In Build</option>
+          <option value="review">In Review</option>
+          <option value="live">Live</option>
+          <option value="pause">Paused</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Progress — <span id="progVal">0</span>%</label>
+        <input type="range" class="prog-slider" id="eProgress" min="0" max="100" value="0" oninput="document.getElementById('progVal').textContent=this.value">
+      </div>
+      <div class="form-group"><label class="form-label">Internal Notes</label><input class="form-input" id="eNotes" placeholder="Notes visible only to you…"></div>
+    </div>
+    <div class="edit-foot">
+      <button class="btn-a btn-a-ghost del" onclick="deleteClient()" style="margin-right:auto;color:#ff3d6b!important;border-color:#ff3d6b!important">Delete</button>
+      <button class="btn-a btn-a-ghost" onclick="closeEdit()">Cancel</button>
+      <button class="btn-a btn-a-primary" onclick="saveClient()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ACCOUNT MODAL -->
+<div class="edit-modal" id="accModal">
+  <div class="edit-panel">
+    <div class="edit-ph"><h3 id="accModalTitle">Create Account</h3><div class="panel-close" onclick="closeAccModal()">✕</div></div>
+    <div class="edit-pb">
+      <div class="edit-grid">
+        <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="accName" placeholder="e.g. John Smith"></div>
+        <div class="form-group"><label class="form-label">Email Address</label><input class="form-input" id="accEmail" type="email" placeholder="john@business.co.uk"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="accPassword" placeholder="Set a password (min 4 chars)"></div>
+      <div class="form-group">
+        <label class="form-label">Account Role</label>
+        <select class="form-select" id="accRole" onchange="toggleAccountRoleFields(this.value)">
+          <option value="client">👤 Client — Can view their project portal</option>
+          <option value="admin">🛡️ Admin — Can access admin dashboard</option>
+        </select>
+      </div>
+      <div class="form-group" id="accClientLinkRow" style="display:flex;flex-direction:column;gap:5px">
+        <label class="form-label">Link to Project</label>
+        <select class="form-select" id="accClientLink">
+          <option value="">— Select a project —</option>
+        </select>
+        <div style="font-size:.74rem;color:#5a6a82;margin-top:2px">This links the client account to their specific project portal.</div>
+      </div>
+      <div style="background:rgba(10,240,160,.05);border:1px solid rgba(10,240,160,.12);border-radius:8px;padding:12px;font-size:.79rem;color:#5a6a82;line-height:1.7">
+        💡 The client will log in using their email + password on the <strong style="color:#e8eef7">Client</strong> tab of the login page.
+      </div>
+    </div>
+    <div class="edit-foot">
+      <button class="btn-a btn-a-ghost" onclick="closeAccModal()">Cancel</button>
+      <button class="btn-a btn-a-primary" onclick="saveAccount()">Save Account</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+<script>
+// ════════════════════════════════════════════════════════
+// DEMAND PILOT — ACCOUNT & AUTH SYSTEM
+// Roles: owner (full access), admin (portal only), client
+// ════════════════════════════════════════════════════════
+
+// ── ACCOUNTS ──
+// Each account: { id, role, name, email, password, ...roleData }
+let accounts = [
+  // OWNER — full access, can manage everything
+  { id: 'owner1', role: 'owner', name: 'You (Owner)', email: 'owner@demandpilot.co.uk', password: 'owner123' },
+  // ADMIN — can access admin dashboard but cannot manage owner accounts or billing
+  { id: 'admin1', role: 'admin', name: 'Admin User', email: 'admin@demandpilot.co.uk', password: 'admin123' },
+  // CLIENTS — linked to a project via clientId
+  { id: 'client1', role: 'client', name: 'Mike Reynolds', email: 'mike@demo.com', password: 'demo123', clientId: 1 },
+  { id: 'client2', role: 'client', name: 'Sarah Clarke', email: 'sarah@elara.co.uk', password: 'sarah123', clientId: 2 },
+  { id: 'client3', role: 'client', name: 'James Booth', email: 'james@booths.co.uk', password: 'james123', clientId: 3 },
+  { id: 'client4', role: 'client', name: 'Dev Kapoor', email: 'dev@kapoor.co.uk', password: 'dev123', clientId: 4 },
+  { id: 'client5', role: 'client', name: 'Laura Tate', email: 'laura@tate.co.uk', password: 'laura123', clientId: 5 },
+];
+
+// ── PROJECTS (client data) ──
+let clients = [
+  { id:1, name:'Mike Reynolds', biz:'MR Plumbing', email:'mike@demo.com', pkg:'Pro', status:'build', progress:65, notes:'Phone number prominent on mobile', val:649,
+    milestones:[{label:'Discovery Call',done:true,date:'12 Jan'},{label:'Design Mockup',done:true,date:'14 Jan'},{label:'Build & Development',active:true,date:'In progress'},{label:'Client Review',done:false,date:'~19 Jan'},{label:'Launch Day',done:false,date:'~21 Jan'}],
+    messages:[{from:'us',text:'Hey Mike — homepage build is looking great. Preview link by Thursday!',time:'Today, 10:14am'},{from:'them',text:'Brilliant! Can we make the phone number prominent on mobile?',time:'Today, 10:32am'},{from:'us',text:'Absolutely — pinning it to the mobile header now. ✅',time:'Today, 10:35am'}],
+    files:[{ico:'🎨',name:'Homepage_Mockup_v2.fig',size:'4.2 MB'},{ico:'📄',name:'Project_Brief_Signed.pdf',size:'280 KB'},{ico:'🖼',name:'Brand_Assets.zip',size:'12.1 MB'},{ico:'📋',name:'Copy_Draft_v1.docx',size:'64 KB'}]
+  },
+  { id:2, name:'Sarah Clarke', biz:'Elara Skin Studio', email:'sarah@elara.co.uk', pkg:'Launch', status:'review', progress:90, notes:'Almost ready to launch', val:349,
+    milestones:[{label:'Discovery Call',done:true,date:'8 Jan'},{label:'Design Mockup',done:true,date:'10 Jan'},{label:'Build & Development',done:true,date:'16 Jan'},{label:'Client Review',active:true,date:'In progress'},{label:'Launch Day',done:false,date:'~22 Jan'}],
+    messages:[{from:'us',text:'Hi Sarah — your preview link is ready! Check your email.',time:'Yesterday'},{from:'them',text:'Looks amazing, thank you!',time:'Yesterday'}],
+    files:[{ico:'🎨',name:'Elara_Mockup_v3.fig',size:'3.1 MB'},{ico:'📄',name:'Project_Brief.pdf',size:'210 KB'}]
+  },
+  { id:3, name:'James Booth', biz:"Booth's Outdoor", email:'james@booths.co.uk', pkg:'Scale', status:'live', progress:100, notes:'Paid in full. Very happy.', val:1299,
+    milestones:[{label:'Discovery Call',done:true,date:'2 Jan'},{label:'Design Mockup',done:true,date:'5 Jan'},{label:'Build & Development',done:true,date:'12 Jan'},{label:'Client Review',done:true,date:'14 Jan'},{label:'Launch Day',done:true,date:'16 Jan'}],
+    messages:[{from:'them',text:'Invoice paid, cheers! Site looks brilliant.',time:'16 Jan'},{from:'us',text:'Fantastic James — enjoy your new site! 🚀',time:'16 Jan'}],
+    files:[{ico:'🌐',name:'Live_Site_URL.txt',size:'1 KB'},{ico:'📋',name:'Handover_Guide.pdf',size:'890 KB'}]
+  },
+  { id:4, name:'Dev Kapoor', biz:'Kapoor Electricals', email:'dev@kapoor.co.uk', pkg:'Pro', status:'build', progress:40, notes:'Waiting on brand assets', val:649,
+    milestones:[{label:'Discovery Call',done:true,date:'15 Jan'},{label:'Design Mockup',active:true,date:'In progress'},{label:'Build & Development',done:false,date:'TBC'},{label:'Client Review',done:false,date:'TBC'},{label:'Launch Day',done:false,date:'TBC'}],
+    messages:[{from:'them',text:'When can I see the mockup?',time:'Today'},{from:'us',text:'Hi Dev — mockup is 80% done, sending tomorrow morning!',time:'Today'}],
+    files:[{ico:'📄',name:'Project_Brief.pdf',size:'180 KB'}]
+  },
+  { id:5, name:'Laura Tate', biz:'Tate & Co.', email:'laura@tate.co.uk', pkg:'Launch', status:'live', progress:100, notes:'Paid in full.', val:349,
+    milestones:[{label:'Discovery Call',done:true,date:'5 Jan'},{label:'Design Mockup',done:true,date:'7 Jan'},{label:'Build & Development',done:true,date:'11 Jan'},{label:'Client Review',done:true,date:'12 Jan'},{label:'Launch Day',done:true,date:'13 Jan'}],
+    messages:[{from:'us',text:'Laura — your site is live! 🎉',time:'13 Jan'},{from:'them',text:'Perfect, thank you so much!',time:'13 Jan'}],
+    files:[{ico:'🌐',name:'Live_Site_URL.txt',size:'1 KB'},{ico:'📋',name:'Handover_Guide.pdf',size:'760 KB'}]
+  },
+];
+
+let currentUser = null;
+let editingId = null;
+let editingAccountId = null;
+const SL = { live:'Live', build:'In Build', review:'In Review', disco:'Discovery', pause:'Paused' };
+const pkgVal = { Launch:349, Pro:649, Scale:1299 };
+
+// ── REVEAL ──
+try{
+  document.querySelectorAll('.reveal').forEach(r=>r.classList.add('animate'));
+  const ro=new IntersectionObserver(es=>es.forEach(e=>{
+    if(e.isIntersecting){e.target.classList.add('visible');}
+  }),{threshold:0.05});
+  document.querySelectorAll('.reveal').forEach(r=>ro.observe(r));
+}catch(e){
+  // If observer fails, just make everything visible
+  document.querySelectorAll('.reveal').forEach(r=>r.style.opacity='1');
+}
+
+// ── TOAST ──
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.borderColor=type==='error'?'#ff3d6b':type==='warn'?'#f59e0b':'#0af0a0';
+  t.style.color=type==='error'?'#ff3d6b':type==='warn'?'#f59e0b':'#0af0a0';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ── ACCORDION ──
+function toggleAcc(h){const item=h.parentElement,body=item.querySelector('.acc-body'),open=item.classList.contains('open');document.querySelectorAll('.acc-item').forEach(i=>{i.classList.remove('open');i.querySelector('.acc-body').classList.remove('open');});if(!open){item.classList.add('open');body.classList.add('open');}}
+
+// ── PAGE NAVIGATION ──
+function showPage(pageId) {
+  ['mainSite','portalWrap'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display='none';
+  });
+  ['portalLogin','portalClient','portalAdmin'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display='none';
+  });
+  if(pageId==='main'){
+    document.getElementById('mainSite').style.display='block';
+  } else {
+    document.getElementById('portalWrap').style.display='block';
+    document.getElementById(pageId).style.display = pageId==='portalLogin' ? 'flex' : 'block';
+  }
+  window.scrollTo(0,0);
+}
+
+function openLogin(){showPage('portalLogin');}
+function closePortal(){currentUser=null;showPage('main');}
+function closeOverlay(){closePortal();}
+
+// ── LOGIN ──
+let loginTab='client';
+function switchLoginTab(t){
+  loginTab=t;
+  ['client','admin','owner'].forEach(tab=>{
+    const el=document.getElementById('ltab-'+tab);
+    if(!el)return;
+    el.style.background = t===tab?'#0af0a0':'transparent';
+    el.style.color = t===tab?'#05080f':'#5a6a82';
+  });
+  document.getElementById('loginError').style.display='none';
+}
+
+function doLogin(){
+  const em=document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pw=document.getElementById('loginPass').value.trim();
+  const err=document.getElementById('loginError');
+
+  const user = accounts.find(a=>a.email.toLowerCase()===em && a.password===pw);
+
+  if(!user){
+    err.textContent='Incorrect email or password. Please try again.';
+    err.style.display='block';
+    setTimeout(()=>err.style.display='none',3000);
+    return;
+  }
+
+  // Role check vs tab selected
+  if(loginTab==='client' && user.role!=='client'){
+    err.textContent='This account is not a client account. Use the correct tab.';
+    err.style.display='block';setTimeout(()=>err.style.display='none',3000);return;
+  }
+  if(loginTab==='admin' && user.role!=='admin'){
+    err.textContent='This account does not have admin access.';
+    err.style.display='block';setTimeout(()=>err.style.display='none',3000);return;
+  }
+  if(loginTab==='owner' && user.role!=='owner'){
+    err.textContent='Incorrect owner credentials.';
+    err.style.display='block';setTimeout(()=>err.style.display='none',3000);return;
+  }
+
+  currentUser = user;
+
+  if(user.role==='client'){
+    const project = clients.find(c=>c.id===user.clientId);
+    if(!project){
+      err.textContent='No project found for this account. Contact support.';
+      err.style.display='block';return;
+    }
+    renderClientPortal(project);
+    showPage('portalClient');
+    setTimeout(()=>{
+      const pct=project.progress;
+      const b=document.getElementById('cpProgressFill');
+      if(b)b.style.width=pct+'%';
+    },500);
+  } else {
+    // admin or owner — both see admin dashboard; owner gets extra tabs
+    showPage('portalAdmin');
+    updateAdminNavForRole(user.role);
+    renderStats();renderClients();renderOverview();renderBarChart();renderRevStats();buildChatList();renderInvoices();
+  }
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    const lp=document.getElementById('portalLogin');
+    if(lp && lp.style.display!=='none') doLogin();
+  }
+});
+
+// ── UPDATE ADMIN NAV BASED ON ROLE ──
+function updateAdminNavForRole(role){
+  // Owner gets extra "Accounts" tab; admin does not
+  const accountsBtn = document.getElementById('admNavAccounts');
+  if(accountsBtn) accountsBtn.style.display = (role==='owner')?'flex':'none';
+  // Update header name
+  const roleLabel = document.getElementById('admRoleLabel');
+  if(roleLabel){
+    if(role==='owner') roleLabel.innerHTML='Logged in as <strong style="color:#f59e0b">👑 Owner</strong>';
+    else roleLabel.innerHTML='Logged in as <strong style="color:#0af0a0">Admin</strong>';
+  }
+}
+
+// ── RENDER CLIENT PORTAL ──
+function renderClientPortal(p){
+  // Welcome
+  const statusMap={live:'Live ✓',build:'In Build',review:'In Review',disco:'Discovery',pause:'Paused'};
+  const statusColor={live:'#0af0a0',build:'#60a5fa',review:'#f59e0b',disco:'#a78bfa',pause:'#ff3d6b'};
+  const sc=document.getElementById('cpStatusChip');
+  if(sc){sc.textContent=statusMap[p.status]||p.status;sc.style.color=statusColor[p.status]||'#0af0a0';}
+
+  const wm=document.getElementById('cpWelcomeName');if(wm)wm.textContent='Welcome back, '+p.name.split(' ')[0]+' 👋';
+  const ws=document.getElementById('cpWelcomeSub');if(ws)ws.textContent='Project '+p.progress+'% complete — '+p.biz;
+  const pp=document.getElementById('cpPctBig');if(pp)pp.textContent=p.progress+'%';
+  const pb=document.getElementById('cpPkgName');if(pb)pb.textContent=p.pkg;
+  const pct=document.getElementById('progPctLabel');if(pct)pct.textContent=p.progress+'%';
+  const pt=document.getElementById('cpProjectTitle');if(pt)pt.textContent=p.biz+' — Website Build';
+  const ph=document.getElementById('cpPctHeader');if(ph)ph.textContent=p.progress+'%';
+
+  // Balance
+  const paid=p.status==='live'?p.val:p.val*0.5;
+  const bal=p.val-paid;
+  const balEl=document.getElementById('cpBalance');if(balEl)balEl.textContent=bal>0?'£'+bal.toLocaleString():'Paid ✓';
+  if(balEl)balEl.style.color=bal>0?'#f59e0b':'#0af0a0';
+
+  // Milestones
+  const ml=document.getElementById('cpMilestoneList');
+  if(ml) ml.innerHTML=p.milestones.map(m=>{
+    const cls=m.done?'done':m.active?'active-m':'pending';
+    const ico=m.done?'✓':m.active?'⟳':'○';
+    const bg=m.done?'rgba(10,240,160,.05)':m.active?'rgba(0,98,255,.07)':'#111927';
+    const br=m.done?'1px solid rgba(10,240,160,.15)':m.active?'1px solid rgba(0,98,255,.2)':'1px solid transparent';
+    const ic=m.done?'rgba(10,240,160,.15)':m.active?'rgba(0,98,255,.15)':'#0f1c2e';
+    const tc=m.done?'#0af0a0':m.active?'#60a5fa':'#5a6a82';
+    const op=(!m.done&&!m.active)?'opacity:.55;':'';
+    return `<div style="display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:10px;background:${bg};border:${br};${op}">
+      <div style="width:29px;height:29px;border-radius:7px;background:${ic};color:${tc};display:flex;align-items:center;justify-content:center;font-size:.78rem;flex-shrink:0">${ico}</div>
+      <div style="flex:1"><div style="font-family:Syne,sans-serif;font-weight:600;font-size:.85rem;color:white">${m.label}</div></div>
+      <div style="font-size:.72rem;color:#5a6a82;white-space:nowrap">${m.date}</div>
+    </div>`;
+  }).join('');
+
+  // Messages
+  const ma=document.getElementById('cpMsgArea');
+  if(ma) ma.innerHTML=p.messages.map(m=>{
+    const isUs=m.from==='us';
+    const bg=isUs?'rgba(0,98,255,.12)':'rgba(10,240,160,.1)';
+    const br=isUs?'1px solid rgba(0,98,255,.2)':'1px solid rgba(10,240,160,.2)';
+    const align=isUs?'flex-start':'flex-end';
+    const sender=isUs?'<div style="color:#60a5fa;font-weight:600;font-size:.69rem;margin-bottom:3px;font-family:Syne,sans-serif">Demand Pilot</div>':'';
+    return `<div style="padding:10px 13px;border-radius:8px;font-size:.83rem;line-height:1.6;max-width:84%;background:${bg};border:${br};color:#e8eef7;align-self:${align}">${sender}${m.text}<div style="font-size:.67rem;color:#5a6a82;margin-top:3px">${m.time}</div></div>`;
+  }).join('');
+
+  // Files
+  const fl=document.getElementById('cpFileList');
+  if(fl) fl.innerHTML=p.files.map(f=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:11px 13px;background:#111927;border-radius:8px;border:1px solid #1e2d42;cursor:pointer">
+      <span style="font-size:1rem;width:28px;text-align:center">${f.ico}</span>
+      <span style="flex:1;font-size:.83rem;color:#e8eef7">${f.name}</span>
+      <span style="font-size:.71rem;color:#5a6a82">${f.size}</span>
+      <span onclick="showToast('Downloading ${f.name}…')" style="color:#0af0a0;font-size:.75rem;font-family:Syne,sans-serif;font-weight:600;padding:3px 9px;border-radius:5px;background:rgba(10,240,160,.08);cursor:pointer">Download</span>
+    </div>`).join('');
+
+  // Invoice
+  const paid2=p.status==='live'?p.val:p.val*0.5;
+  const bal2=p.val-paid2;
+  const inv=document.getElementById('cpInvoiceBlock');
+  if(inv) inv.innerHTML=`
+    <div style="background:#111927;border-radius:10px;overflow:hidden;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;padding:11px 16px;border-bottom:1px solid #1e2d42"><span style="font-size:.83rem;color:#5a6a82">Package</span><span style="font-family:Syne,sans-serif;font-weight:600;font-size:.87rem;color:white">${p.pkg}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:11px 16px;border-bottom:1px solid #1e2d42"><span style="font-size:.83rem;color:#5a6a82">Total Value</span><span style="font-family:Syne,sans-serif;font-weight:600;font-size:.87rem;color:white">£${p.val.toLocaleString()}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:11px 16px;border-bottom:1px solid #1e2d42"><span style="font-size:.83rem;color:#5a6a82">Deposit Paid (50%)</span><span style="font-family:Syne,sans-serif;font-weight:600;font-size:.87rem;color:#0af0a0">£${paid2.toLocaleString()} ✓</span></div>
+      <div style="display:flex;justify-content:space-between;padding:11px 16px;border-bottom:1px solid #1e2d42"><span style="font-size:.83rem;color:#5a6a82">Balance Due</span><span style="font-family:Syne,sans-serif;font-weight:600;font-size:.87rem;color:${bal2>0?'#f59e0b':'#0af0a0'}">${bal2>0?'£'+bal2.toLocaleString():'Paid in full ✓'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:11px 16px"><span style="font-size:.83rem;color:#5a6a82">Status</span><span style="font-family:Syne,sans-serif;font-weight:600;font-size:.87rem;color:white">${p.status==='live'?'Paid in full':'Deposit received'}</span></div>
+    </div>
+    ${bal2>0?`<button onclick="showToast('Payment link sent to your email!')" style="background:#0af0a0;color:#05080f;padding:12px 24px;border-radius:8px;font-family:Syne,sans-serif;font-weight:700;font-size:.85rem;border:none;cursor:pointer">Pay Now →</button>`:'<div style="color:#0af0a0;font-family:Syne,sans-serif;font-weight:700;font-size:.9rem">✓ All payments complete</div>'}`;
+}
+
+// ── CLIENT PORTAL TABS ──
+function switchCPTab(tab,btn){
+  document.querySelectorAll('.cpsec').forEach(s=>{s.style.display='none';});
+  document.querySelectorAll('.cptab').forEach(b=>{b.style.background='transparent';b.style.color='#5a6a82';});
+  document.getElementById('cpsec-'+tab).style.display='block';
+  if(btn){btn.style.background='#111927';btn.style.color='white';}
+}
+
+function sendCPMsg(){
+  const inp=document.getElementById('cpMsgInp');
+  if(!inp.value.trim())return;
+  const area=document.getElementById('cpMsgArea');
+  const d=document.createElement('div');
+  d.style.cssText='padding:10px 13px;border-radius:8px;font-size:.83rem;line-height:1.6;max-width:84%;background:rgba(10,240,160,.1);border:1px solid rgba(10,240,160,.2);color:#e8eef7;align-self:flex-end';
+  d.innerHTML=inp.value+'<div style="font-size:.67rem;color:#5a6a82;margin-top:3px">Just now</div>';
+  area.appendChild(d);inp.value='';area.scrollTop=area.scrollHeight;
+  setTimeout(()=>{
+    const r=document.createElement('div');
+    r.style.cssText='padding:10px 13px;border-radius:8px;font-size:.83rem;line-height:1.6;max-width:84%;background:rgba(0,98,255,.12);border:1px solid rgba(0,98,255,.2);color:#e8eef7;align-self:flex-start';
+    r.innerHTML='<div style="color:#60a5fa;font-weight:600;font-size:.69rem;margin-bottom:3px;font-family:Syne,sans-serif">Demand Pilot</div>Got it — we\'ll action that right away! 🚀<div style="font-size:.67rem;color:#5a6a82;margin-top:3px">Just now</div>';
+    area.appendChild(r);area.scrollTop=area.scrollHeight;
+  },1500);
+}
+
+// ── ADMIN SECTIONS ──
+function switchAdm(name,btn){
+  document.querySelectorAll('.adm-sec').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.admbtn').forEach(b=>{b.style.background='transparent';b.style.color='#5a6a82';});
+  const sec=document.getElementById('adm-'+name);
+  if(sec)sec.classList.add('active');
+  if(btn){btn.style.background='rgba(10,240,160,.08)';btn.style.color='#0af0a0';}
+  if(name==='clients')renderClients();
+  if(name==='revenue'){renderBarChart();renderRevStats();renderInvoices();}
+  if(name==='overview'){renderOverview();renderStats();}
+  if(name==='messages')buildChatList();
+  if(name==='accounts')renderAccountsTable();
+}
+
+// ── STATS ──
+function renderStats(){
+  const active=clients.filter(c=>c.status!=='pause').length;
+  const inprog=clients.filter(c=>['build','disco','review'].includes(c.status)).length;
+  const rev=clients.reduce((a,c)=>a+c.val,0);
+  const out=clients.filter(c=>c.status!=='live').reduce((a,c)=>a+(c.val*.5),0);
+  const el=document.getElementById('admStatsRow');
+  if(!el)return;
+  el.innerHTML=`
+    <div class="adm-stat"><div class="adm-stat-label">Active Clients</div><div class="adm-stat-val">${active}</div><div class="adm-stat-change up">↑ 2 this month</div></div>
+    <div class="adm-stat"><div class="adm-stat-label">Revenue (Jan)</div><div class="adm-stat-val">£${rev.toLocaleString()}</div><div class="adm-stat-change up">↑ £1,100 vs Dec</div></div>
+    <div class="adm-stat"><div class="adm-stat-label">In Progress</div><div class="adm-stat-val">${inprog}</div><div class="adm-stat-change neu">2 launching soon</div></div>
+    <div class="adm-stat"><div class="adm-stat-label">Outstanding</div><div class="adm-stat-val">£${out.toLocaleString()}</div><div class="adm-stat-change dn">${clients.filter(c=>c.status!=='live').length} invoices pending</div></div>`;
+}
+
+function renderRevStats(){
+  const rev=clients.reduce((a,c)=>a+c.val,0);
+  const out=clients.filter(c=>c.status!=='live').reduce((a,c)=>a+(c.val*.5),0);
+  const el=document.getElementById('revStatsRow');
+  if(!el)return;
+  el.innerHTML=`
+    <div class="adm-stat"><div class="adm-stat-label">All-Time Revenue</div><div class="adm-stat-val">£${(rev+8894).toLocaleString()}</div><div class="adm-stat-change up">All time</div></div>
+    <div class="adm-stat"><div class="adm-stat-label">This Month</div><div class="adm-stat-val">£${rev.toLocaleString()}</div><div class="adm-stat-change up">↑ 38% vs last</div></div>
+    <div class="adm-stat"><div class="adm-stat-label">Avg. Project</div><div class="adm-stat-val">£${Math.round(rev/clients.length)}</div><div class="adm-stat-change neu">Across all packages</div></div>
+    <div class="adm-stat"><div class="adm-stat-label">Outstanding</div><div class="adm-stat-val">£${out.toLocaleString()}</div><div class="adm-stat-change dn">${clients.filter(c=>c.status!=='live').length} invoices due</div></div>`;
+}
+
+// ── PROJECT ROWS ──
+function tRow(c){
+  const canEdit = currentUser && (currentUser.role==='owner'||currentUser.role==='admin');
+  return `<tr>
+    <td><strong>${c.name}</strong><div style="font-size:.72rem;color:var(--muted)">${c.biz}</div></td>
+    <td>${c.pkg}</td>
+    <td><span class="ts ${c.status}" title="Click to cycle status" onclick="${canEdit?'cycleStatus('+c.id+')':''}" style="${canEdit?'cursor:pointer':''}">${SL[c.status]}</span></td>
+    <td><div style="display:flex;align-items:center;gap:7px"><div class="tpb"><div class="tpf" style="width:${c.progress}%"></div></div><span style="font-size:.71rem;color:var(--muted)">${c.progress}%</span></div></td>
+    <td>£${c.val}</td>
+    <td><div style="display:flex;gap:5px">${canEdit?`<button class="btn-sm" onclick="openEdit(${c.id})">Edit</button><button class="btn-sm del" onclick="confirmDel(${c.id})">Delete</button>`:''}</div></td>
+  </tr>`;
+}
+
+function renderClients(){
+  const q=(document.getElementById('clientSearch')||{}).value||'';
+  const f=clients.filter(c=>c.name.toLowerCase().includes(q.toLowerCase())||c.biz.toLowerCase().includes(q.toLowerCase()));
+  const el=document.getElementById('clientCount');if(el)el.textContent='('+clients.length+' total)';
+  const tbl=document.getElementById('clientsTbl');
+  if(tbl)tbl.innerHTML=`<table class="adm-tbl"><thead><tr><th>Client</th><th>Package</th><th>Status</th><th>Progress</th><th>Value</th><th>Actions</th></tr></thead><tbody>${f.map(tRow).join('')}</tbody></table>`;
+}
+
+function renderOverview(){
+  const el=document.getElementById('overviewTbl');
+  if(el)el.innerHTML=`<table class="adm-tbl"><thead><tr><th>Client</th><th>Package</th><th>Status</th><th>Progress</th><th>Value</th><th>Actions</th></tr></thead><tbody>${clients.slice(0,5).map(tRow).join('')}</tbody></table>`;
+}
+
+function renderInvoices(){
+  const rows=clients.map(c=>{
+    const paid=c.status==='live'?c.val:c.val*.5;
+    const out=c.val-paid;
+    return `<tr><td><strong>${c.name}</strong></td><td>${c.pkg}</td><td>£${c.val}</td><td style="color:var(--accent)">£${paid.toLocaleString()}</td><td style="color:${out>0?'var(--accent4)':'var(--accent)'}">£${out.toLocaleString()}</td><td><span class="ts ${out===0?'live':'build'}">${out===0?'Paid':'Pending'}</span></td></tr>`;
+  }).join('');
+  const el=document.getElementById('invoiceTbl');
+  if(el)el.innerHTML=`<table class="adm-tbl"><thead><tr><th>Client</th><th>Package</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function cycleStatus(id){
+  const c=clients.find(x=>x.id===id);if(!c)return;
+  const order=['disco','build','review','live','pause'];
+  c.status=order[(order.indexOf(c.status)+1)%order.length];
+  renderClients();renderOverview();renderStats();
+  showToast(c.name+' → '+SL[c.status]);
+}
+
+function confirmDel(id){
+  const c=clients.find(x=>x.id===id);if(!c)return;
+  if(confirm('Delete '+c.name+'? This cannot be undone.')){
+    clients=clients.filter(x=>x.id!==id);
+    accounts=accounts.filter(a=>a.clientId!==id);
+    renderClients();renderOverview();renderStats();
+    showToast('Client and account deleted.');
+  }
+}
+
+// ── EDIT PROJECT MODAL ──
+function openEdit(id){
+  editingId=id;
+  const c=id===null?{id:null,name:'',biz:'',email:'',pkg:'Pro',status:'disco',progress:0,notes:'',val:649}:clients.find(x=>x.id===id);
+  document.getElementById('editTitle').textContent=id===null?'New Project':'Edit — '+c.name;
+  document.getElementById('editId').value=c.id||'';
+  document.getElementById('eName').value=c.name;
+  document.getElementById('eBiz').value=c.biz;
+  document.getElementById('eEmail').value=c.email;
+  document.getElementById('ePkg').value=c.pkg;
+  document.getElementById('eStatus').value=c.status;
+  document.getElementById('eProgress').value=c.progress;
+  document.getElementById('progVal').textContent=c.progress;
+  document.getElementById('eNotes').value=c.notes||'';
+  document.getElementById('editModal').classList.add('active');
+}
+function closeEdit(){document.getElementById('editModal').classList.remove('active');}
+function saveClient(){
+  const pkg=document.getElementById('ePkg').value;
+  const v=pkgVal[pkg]||649;
+  const email=document.getElementById('eEmail').value||'';
+  const data={name:document.getElementById('eName').value||'New Client',biz:document.getElementById('eBiz').value||'Business',email,pkg,status:document.getElementById('eStatus').value,progress:parseInt(document.getElementById('eProgress').value),notes:document.getElementById('eNotes').value,val:v,milestones:[{label:'Discovery Call',done:false,date:'TBC'},{label:'Design Mockup',done:false,date:'TBC'},{label:'Build & Development',done:false,date:'TBC'},{label:'Client Review',done:false,date:'TBC'},{label:'Launch Day',done:false,date:'TBC'}],messages:[],files:[]};
+  if(editingId===null){
+    data.id=Date.now();
+    clients.push(data);
+    // Auto-create a client account if email provided and no existing account
+    if(email && !accounts.find(a=>a.email.toLowerCase()===email.toLowerCase())){
+      const tempPw='client'+Math.floor(1000+Math.random()*9000);
+      accounts.push({id:'acc'+Date.now(),role:'client',name:data.name,email,password:tempPw,clientId:data.id});
+      showToast('Project + account created! Temp password: '+tempPw,'warn');
+    } else {
+      showToast('Project added!');
+    }
+  } else {
+    const i=clients.findIndex(c=>c.id===editingId);
+    if(i>-1){
+      clients[i]={...clients[i],...data};
+      // Update linked account email if changed
+      const acc=accounts.find(a=>a.clientId===editingId);
+      if(acc&&email)acc.email=email;
+      showToast('Project saved!');
+    }
+  }
+  closeEdit();renderClients();renderOverview();renderStats();
+}
+function deleteClient(){
+  if(editingId===null)return;
+  const c=clients.find(x=>x.id===editingId);
+  if(c&&confirm('Delete '+c.name+'?')){
+    clients=clients.filter(x=>x.id!==editingId);
+    accounts=accounts.filter(a=>a.clientId!==editingId);
+    closeEdit();renderClients();renderOverview();renderStats();showToast('Deleted.');
+  }
+}
+
+// ── ACCOUNTS TABLE (Owner only) ──
+function renderAccountsTable(){
+  if(!currentUser||currentUser.role!=='owner')return;
+  const el=document.getElementById('accountsTbl');
+  if(!el)return;
+  const roleColor={owner:'#f59e0b',admin:'#60a5fa',client:'#0af0a0'};
+  const roleIcon={owner:'👑',admin:'🛡️',client:'👤'};
+  el.innerHTML=`<table class="adm-tbl"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Linked Project</th><th>Password</th><th>Actions</th></tr></thead><tbody>
+  ${accounts.map(a=>{
+    const proj=a.clientId?clients.find(c=>c.id===a.clientId):null;
+    return `<tr>
+      <td><strong>${a.name}</strong></td>
+      <td style="font-size:.8rem">${a.email}</td>
+      <td><span style="background:${roleColor[a.role]}22;color:${roleColor[a.role]};border-radius:100px;padding:3px 10px;font-family:Syne,sans-serif;font-size:.68rem;font-weight:700">${roleIcon[a.role]} ${a.role.charAt(0).toUpperCase()+a.role.slice(1)}</span></td>
+      <td style="font-size:.8rem;color:var(--muted)">${proj?proj.biz:'—'}</td>
+      <td><span style="font-family:Syne,monospace;font-size:.78rem;color:var(--muted);background:var(--surface2);padding:2px 8px;border-radius:4px">${a.password}</span></td>
+      <td><div style="display:flex;gap:5px">
+        ${a.role!=='owner'?`<button class="btn-sm" onclick="openEditAccount('${a.id}')">Edit</button>`:''}
+        ${a.role!=='owner'?`<button class="btn-sm del" onclick="deleteAccount('${a.id}')">Delete</button>`:''}
+        ${a.role==='owner'?'<span style="font-size:.75rem;color:var(--muted)">Protected</span>':''}
+      </div></td>
+    </tr>`;
+  }).join('')}
+  </tbody></table>`;
+}
+
+function openNewAccount(){
+  editingAccountId=null;
+  document.getElementById('accModalTitle').textContent='Create New Account';
+  document.getElementById('accName').value='';
+  document.getElementById('accEmail').value='';
+  document.getElementById('accPassword').value='';
+  document.getElementById('accRole').value='client';
+  toggleAccountRoleFields('client');
+  document.getElementById('accModal').classList.add('active');
+}
+
+function openEditAccount(id){
+  const a=accounts.find(x=>x.id===id);
+  if(!a)return;
+  editingAccountId=id;
+  document.getElementById('accModalTitle').textContent='Edit — '+a.name;
+  document.getElementById('accName').value=a.name;
+  document.getElementById('accEmail').value=a.email;
+  document.getElementById('accPassword').value=a.password;
+  document.getElementById('accRole').value=a.role;
+  toggleAccountRoleFields(a.role);
+  // Pre-fill linked project
+  if(a.clientId){
+    const sel=document.getElementById('accClientLink');
+    if(sel)sel.value=a.clientId;
+  }
+  document.getElementById('accModal').classList.add('active');
+}
+
+function toggleAccountRoleFields(role){
+  const linkRow=document.getElementById('accClientLinkRow');
+  if(linkRow)linkRow.style.display=role==='client'?'flex':'none';
+  // Populate client dropdown
+  if(role==='client'){
+    const sel=document.getElementById('accClientLink');
+    if(sel){
+      sel.innerHTML='<option value="">— Select project —</option>'+clients.map(c=>`<option value="${c.id}">${c.name} (${c.biz})</option>`).join('');
+    }
+  }
+}
+
+function saveAccount(){
+  const name=document.getElementById('accName').value.trim();
+  const email=document.getElementById('accEmail').value.trim().toLowerCase();
+  const password=document.getElementById('accPassword').value.trim();
+  const role=document.getElementById('accRole').value;
+  const clientId=role==='client'?parseInt(document.getElementById('accClientLink').value)||null:null;
+
+  if(!name||!email||!password){showToast('Please fill in all fields','error');return;}
+  if(password.length<4){showToast('Password must be at least 4 characters','error');return;}
+
+  // Check email not already taken by another account
+  const existing=accounts.find(a=>a.email.toLowerCase()===email&&a.id!==editingAccountId);
+  if(existing){showToast('An account with this email already exists','error');return;}
+
+  if(editingAccountId===null){
+    const newAcc={id:'acc'+Date.now(),role,name,email,password};
+    if(role==='client'&&clientId)newAcc.clientId=clientId;
+    accounts.push(newAcc);
+    showToast(role.charAt(0).toUpperCase()+role.slice(1)+' account created!');
+  } else {
+    const i=accounts.findIndex(a=>a.id===editingAccountId);
+    if(i>-1){
+      accounts[i]={...accounts[i],name,email,password,role};
+      if(role==='client'&&clientId)accounts[i].clientId=clientId;
+      showToast('Account updated!');
+    }
+  }
+  closeAccModal();
+  renderAccountsTable();
+}
+
+function deleteAccount(id){
+  const a=accounts.find(x=>x.id===id);
+  if(!a)return;
+  if(a.role==='owner'){showToast('Cannot delete owner account','error');return;}
+  if(confirm('Delete account for '+a.name+'?')){
+    accounts=accounts.filter(x=>x.id!==id);
+    renderAccountsTable();
+    showToast('Account deleted.');
+  }
+}
+
+function closeAccModal(){document.getElementById('accModal').classList.remove('active');}
+
+// ── BAR CHART ──
+function renderBarChart(){
+  const months=['Aug','Sep','Oct','Nov','Dec','Jan'];
+  const vals=[820,1050,940,1420,1850,clients.reduce((a,c)=>a+c.val,0)];
+  const mx=Math.max(...vals);
+  const el=document.getElementById('barChart');
+  if(!el)return;
+  el.innerHTML=months.map((m,i)=>`
+    <div class="bar-wrap">
+      <div class="bar" style="height:${Math.round((vals[i]/mx)*100)}px">
+        <div class="bar-tip">£${vals[i].toLocaleString()}</div>
+      </div>
+      <div class="bar-label">${m}</div>
+    </div>`).join('');
+}
+
+// ── ADMIN MESSAGES ──
+function buildChatList(){
+  const el=document.getElementById('chatList');if(!el)return;
+  el.innerHTML=clients.map(c=>`
+    <div class="adm-ci" onclick="selectChat(this,${c.id})">
+      <div class="adm-ci-name">${c.name}${c.id===1?'<span class="unread">1</span>':''}</div>
+      <div class="adm-ci-last">${c.messages.length?c.messages[c.messages.length-1].text.substring(0,30)+'…':''}</div>
+    </div>`).join('');
+}
+
+function selectChat(el,id){
+  document.querySelectorAll('.adm-ci').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+  const c=clients.find(x=>x.id===id);
+  const titleEl=document.getElementById('admChatTitle');if(titleEl)titleEl.textContent=c.name+' — '+c.biz;
+  const area=document.getElementById('admMsgArea');
+  if(area) area.innerHTML=c.messages.map(m=>{
+    const isUs=m.from==='us';
+    return `<div class="${isUs?'msg us':'msg them'}"><div class="msg-sender">${isUs?'Demand Pilot':c.name.split(' ')[0]}</div>${m.text}<div class="msg-time">${m.time}</div></div>`;
+  }).join('');
+}
+
+function sendAdmMsg(){
+  const inp=document.getElementById('admMsgInp');if(!inp||!inp.value.trim())return;
+  const area=document.getElementById('admMsgArea');
+  if(area){
+    const d=document.createElement('div');d.className='msg us';
+    d.innerHTML='<div class="msg-sender">Demand Pilot</div>'+inp.value+'<div class="msg-time">Just now</div>';
+    area.appendChild(d);area.scrollTop=area.scrollHeight;
+  }
+  inp.value='';showToast('Message sent!');
+}
+
+// ── CTA ──
+function submitCta(e){
+  const inp=document.getElementById('ctaEmail'),btn=e.target;
+  if(!inp.value.includes('@')){inp.style.borderColor='var(--accent3)';setTimeout(()=>inp.style.borderColor='',2000);return;}
+  btn.textContent="✓ We'll be in touch!";btn.style.background='#059669';inp.value='';inp.disabled=true;
+  showToast("We'll be in touch within 24 hours!");
+}
+
+// ── NAV SCROLL ──
+try{window.addEventListener('scroll',()=>{const n=document.getElementById('mainNav');if(n)n.style.background=window.scrollY>50?'rgba(5,8,15,.97)':'rgba(5,8,15,.88)';});}catch(e){}
+
+// ════════════════════════════════════════════════
+// LIVE PROJECT DASHBOARD
+// ════════════════════════════════════════════════
+const stageMap = {
+  disco: 'discovery',
+  build: 'development',
+  review: 'qa',
+  live:  'launch',
+  pause: 'discovery',
+  design: 'design'
+};
+
+function renderDashboard() {
+  const stageCounts = { discovery:0, design:0, development:0, qa:0, launch:0 };
+  const stageCols   = { discovery:[], design:[], development:[], qa:[], launch:[] };
+
+  // Map client statuses to dashboard stages
+  const stageForClient = c => {
+    if (c.status === 'live')   return 'launch';
+    if (c.status === 'review') return 'qa';
+    if (c.status === 'build')  return c.progress < 30 ? 'design' : 'development';
+    return 'discovery';
+  };
+
+  clients.forEach(c => {
+    const stage = stageForClient(c);
+    stageCounts[stage]++;
+    stageCols[stage].push(c);
+  });
+
+  Object.keys(stageCounts).forEach(s => {
+    const el = document.getElementById('dsc-' + s);
+    if (el) el.textContent = stageCounts[s];
+  });
+
+  Object.keys(stageCols).forEach(s => {
+    const col = document.getElementById('col-' + s);
+    if (!col) return;
+    if (stageCols[s].length === 0) {
+      col.innerHTML = '<div style="text-align:center;padding:20px 8px;font-size:.74rem;color:var(--muted)">No projects</div>';
+      return;
+    }
+    col.innerHTML = stageCols[s].map(c => `
+      <div class="dash-card">
+        <div class="dash-card-name">${c.name.split(' ')[0]} ${c.name.split(' ')[1]?.[0]||''}.</div>
+        <div class="dash-card-biz">${c.biz}</div>
+        <span class="dash-card-pkg">${c.pkg}</span>
+        <div class="dash-card-bar"><div class="dash-card-fill" style="width:${c.progress}%"></div></div>
+      </div>`).join('');
+  });
+
+  const live  = clients.filter(c => c.status === 'live').length;
+  const active= clients.filter(c => c.status !== 'live').length;
+  const el_t  = document.getElementById('dash-total');   if(el_t) el_t.textContent = clients.length;
+  const el_a  = document.getElementById('dash-active');  if(el_a) el_a.textContent = active;
+  const el_l  = document.getElementById('dash-live');    if(el_l) el_l.textContent = live;
+}
+
+
+// ════════════════════════════════════════════════
+// ROI CALCULATOR
+// ════════════════════════════════════════════════
+function calcROI() {
+  const visitors  = parseInt(document.getElementById('slider-visitors')?.value || 500);
+  const conv      = parseFloat(document.getElementById('slider-conv')?.value   || 1);
+  const custval   = parseInt(document.getElementById('slider-custval')?.value  || 500);
+  const hours     = parseInt(document.getElementById('slider-hours')?.value    || 10);
+
+  document.getElementById('val-visitors').textContent = visitors.toLocaleString();
+  document.getElementById('val-conv').textContent     = conv + '%';
+  document.getElementById('val-custval').textContent  = '£' + custval.toLocaleString();
+  document.getElementById('val-hours').textContent    = hours + ' hrs';
+
+  // Assume a new website improves conversion by 40%
+  const newConv      = conv * 1.4;
+  const convImprove  = (newConv - conv).toFixed(1);
+  const oldLeads     = Math.round(visitors * (conv / 100));
+  const newLeads     = Math.round(visitors * (newConv / 100));
+  const extraLeads   = newLeads - oldLeads;
+  const extraRevenue = extraLeads * custval;
+  const timeSaved    = Math.round(hours * 0.6);  // 60% of manual tasks automated
+  const total        = extraRevenue + (timeSaved * 25); // £25/hr value of time
+
+  document.getElementById('roi-leads').textContent      = '+' + extraLeads;
+  document.getElementById('roi-revenue').textContent    = '+£' + extraRevenue.toLocaleString();
+  document.getElementById('roi-convimprove').textContent= '+' + convImprove + '%';
+  document.getElementById('roi-time').textContent       = '+' + timeSaved + ' hrs';
+  document.getElementById('roi-total').textContent      = '£' + total.toLocaleString();
+
+  // Payback period
+  const proPrice = 649;
+  if (total > 0) {
+    const months = (proPrice / total).toFixed(1);
+    document.getElementById('roi-payback').textContent =
+      months < 1
+        ? 'Less than 1 month — outstanding ROI'
+        : months <= 3
+        ? months + ' months — excellent ROI'
+        : months + ' months to break even';
+    const barPct = Math.min(100, Math.round((1 / parseFloat(months)) * 100));
+    document.getElementById('roi-bar').style.width = barPct + '%';
+  } else {
+    document.getElementById('roi-payback').textContent = 'Enter your numbers above';
+    document.getElementById('roi-bar').style.width = '0%';
+  }
+}
+
+// Init features after DOM ready
+try{
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(()=>{try{calcROI();}catch(e){}}, 100);
+    setTimeout(()=>{try{buildProposal();}catch(e){}}, 150);
+    setTimeout(()=>{try{renderDashboard();}catch(e){}}, 200);
+  });
+}catch(e){}
+
+// ════════════════════════════════════════════════
+// AI WEBSITE AUDIT
+// ════════════════════════════════════════════════
+const auditStepLabels = [
+  '🔗 Fetching URL',
+  '⚡ Speed Analysis',
+  '🔍 SEO Scan',
+  '♿ Accessibility',
+  '📱 Mobile Check',
+  '💡 Conversion Audit'
+];
+
+// Deterministic score from URL string (so same URL = same score, feels real)
+function urlScore(url, offset) {
+  let hash = 0;
+  for (let i = 0; i < url.length; i++) hash = ((hash << 5) - hash) + url.charCodeAt(i);
+  hash = Math.abs(hash);
+  return Math.min(95, Math.max(28, ((hash + offset) % 60) + 30));
+}
+
+async function runAudit() {
+  const url = document.getElementById('auditUrl').value.trim();
+  if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+    showToast('Please enter a valid URL starting with https://', 'error'); return;
+  }
+
+  document.getElementById('auditResults').style.display = 'none';
+  document.getElementById('auditLoading').style.display = 'block';
+  document.getElementById('auditBtn').textContent = 'Analysing…';
+  document.getElementById('auditBtn').disabled = true;
+
+  // Render step tags
+  const stepsEl = document.getElementById('auditSteps');
+  stepsEl.innerHTML = auditStepLabels.map((s, i) =>
+    `<div class="audit-step-tag" id="astep-${i}">${s}</div>`).join('');
+
+  // Animate steps
+  for (let i = 0; i < auditStepLabels.length; i++) {
+    if (i > 0) document.getElementById(`astep-${i-1}`).classList.replace('active','done');
+    document.getElementById(`astep-${i}`).classList.add('active');
+    await new Promise(r => setTimeout(r, 520));
+  }
+  document.getElementById(`astep-${auditStepLabels.length-1}`).classList.replace('active','done');
+  await new Promise(r => setTimeout(r, 300));
+
+  // Generate scores
+  const domain = url.replace(/https?:\/\//,'').split('/')[0];
+  const scores = {
+    speed:        urlScore(url, 7),
+    seo:          urlScore(url, 13),
+    accessibility:urlScore(url, 29),
+    mobile:       urlScore(url, 41),
+    conversion:   urlScore(url, 53)
+  };
+  const overall = Math.round(Object.values(scores).reduce((a,b)=>a+b,0) / 5);
+
+  // Colour by score
+  const scoreColor = s => s >= 80 ? '#0af0a0' : s >= 60 ? '#f59e0b' : '#ff3d6b';
+  const scoreGrade = s => s >= 80 ? '✓ Good' : s >= 60 ? '⚠ Needs work' : '✕ Poor';
+
+  // Display
+  document.getElementById('auditLoading').style.display = 'none';
+  document.getElementById('auditResults').style.display = 'block';
+  document.getElementById('auditSiteName').textContent = domain;
+  const ov = document.getElementById('auditOverall');
+  ov.textContent = overall;
+  ov.style.color = scoreColor(overall);
+
+  const cardDefs = [
+    { key:'speed',         label:'Speed',         icon:'⚡' },
+    { key:'seo',           label:'SEO',            icon:'🔍' },
+    { key:'accessibility', label:'Accessibility',  icon:'♿' },
+    { key:'mobile',        label:'Mobile',         icon:'📱' },
+    { key:'conversion',    label:'Conversion',     icon:'💡' }
+  ];
+  document.getElementById('auditScoreCards').innerHTML = cardDefs.map(d => `
+    <div class="audit-score-card" style="border-color:${scoreColor(scores[d.key])}22">
+      <div style="font-size:1.3rem;margin-bottom:6px">${d.icon}</div>
+      <div class="audit-score-num" style="color:${scoreColor(scores[d.key])}">${scores[d.key]}</div>
+      <div class="audit-score-label">${d.label}</div>
+      <div style="font-size:.68rem;color:${scoreColor(scores[d.key])};margin-top:3px">${scoreGrade(scores[d.key])}</div>
+      <div class="audit-score-bar"><div class="audit-score-fill" style="width:${scores[d.key]}%;background:${scoreColor(scores[d.key])}"></div></div>
+    </div>`).join('');
+
+  // Generate relevant recommendations based on scores
+  const allRecs = [
+    { key:'speed', priority:'high', icon:'⚡',
+      title:'Page speed is hurting your rankings',
+      text:'Your load time is likely over 3 seconds. Compressing images, enabling caching and using a CDN could reduce it by 60%+, dramatically improving SEO and bounce rate.' },
+    { key:'seo', priority:'high', icon:'🔍',
+      title:'Critical SEO elements are missing',
+      text:'Missing or duplicate meta titles, descriptions and H1 tags are costing you organic visibility. Proper on-page SEO could double your Google traffic within 90 days.' },
+    { key:'accessibility', priority:'med', icon:'♿',
+      title:'Accessibility issues detected',
+      text:'Low contrast text, missing alt tags and poor keyboard navigation affect both disabled users and your SEO score. Google uses accessibility as a ranking signal.' },
+    { key:'mobile', priority:'high', icon:'📱',
+      title:'Mobile experience needs improvement',
+      text:'Over 65% of UK web traffic is mobile. A poor mobile experience leads to higher bounce rates and lower Google rankings since Google uses mobile-first indexing.' },
+    { key:'conversion', priority:'med', icon:'💡',
+      title:'Conversion rate optimisation opportunities',
+      text:'Weak calls-to-action, no social proof above the fold, and unclear value propositions are likely costing you leads every day. Small changes here can double enquiries.' },
+    { key:'speed', priority:'low', icon:'🖼',
+      title:'Images are not optimised',
+      text:'Uncompressed images are one of the biggest causes of slow load times. Converting to WebP format and lazy-loading images off-screen can improve speed scores by 20+ points.' },
+    { key:'seo', priority:'med', icon:'🔗',
+      title:'Internal linking structure is weak',
+      text:'Poor internal linking means Google can't properly crawl and index your pages, and users are less likely to explore deeper into your site — reducing time-on-page.' },
+    { key:'conversion', priority:'high', icon:'📞',
+      title:'No prominent click-to-call on mobile',
+      text:'If you rely on phone enquiries, a sticky click-to-call button on mobile can increase calls by 30-50%. This is one of the highest-ROI quick wins available.' }
+  ];
+
+  // Pick recs for low-scoring areas
+  const recs = allRecs
+    .filter(r => scores[r.key] < 75)
+    .sort((a,b) => (a.priority==='high'?0:a.priority==='med'?1:2) - (b.priority==='high'?0:b.priority==='med'?1:2))
+    .slice(0, 5);
+
+  if (recs.length === 0) recs.push({
+    priority:'low', icon:'🏆',
+    title:'Your site scores well overall!',
+    text:'There are still opportunities to improve. A professional redesign could push your scores into the 90s and significantly increase conversions.'
+  });
+
+  const priorityColor = { high:'var(--accent3)', med:'var(--accent4)', low:'var(--accent)' };
+  const priorityLabel = { high:'High Priority', med:'Medium', low:'Quick Win' };
+
+  document.getElementById('auditRecs').innerHTML = recs.map(r => `
+    <div class="audit-rec ${r.priority}">
+      <div class="audit-rec-icon">${r.icon}</div>
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <div class="audit-rec-title">${r.title}</div>
+          <span style="font-size:.65rem;padding:2px 7px;border-radius:100px;background:${priorityColor[r.priority]}22;color:${priorityColor[r.priority]};font-family:'Syne',sans-serif;font-weight:700">${priorityLabel[r.priority]}</span>
+        </div>
+        <div class="audit-rec-text">${r.text}</div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('auditBtn').textContent = 'Run Free Audit →';
+  document.getElementById('auditBtn').disabled = false;
+}
+
+// ════════════════════════════════════════════════
+// INSTANT PROPOSAL BUILDER
+// ════════════════════════════════════════════════
+const propState = {
+  type: 'brochure',
+  features: ['mobile'],
+  timeline: 'standard',
+  support: 'none'
+};
+
+const typeBase = {
+  brochure:  { label:'Brochure / Service Site',  price:349, pages:'5 pages' },
+  ecommerce: { label:'E-Commerce Store',          price:899, pages:'10+ pages + shop' },
+  portfolio: { label:'Portfolio / Creative',      price:349, pages:'6 pages' },
+  booking:   { label:'Booking / Appointment Site',price:499, pages:'6 pages + booking' },
+  landing:   { label:'Landing Page / Lead Gen',   price:249, pages:'1-2 pages' },
+  saas:      { label:'SaaS / App Marketing',      price:549, pages:'8 pages' }
+};
+
+const featPrice = {
+  blog:10, gallery:0, contact:0, chat:50, seo:80,
+  mobile:0, analytics:0, crm:120, payments:150, multilang:200
+};
+
+const featLabel = {
+  blog:'Blog', gallery:'Gallery', contact:'Contact Form', chat:'Live Chat',
+  seo:'SEO Setup', mobile:'Mobile Optimised', analytics:'Analytics',
+  crm:'CRM Integration', payments:'Payment System', multilang:'Multi-language'
+};
+
+const supportPrice = { none:0, basic:75, growth:200, full:450 };
+const supportLabel = { none:'Launch only', basic:'Basic Care (£75/mo)', growth:'Growth (£200/mo)', full:'Full Service (£450/mo)' };
+
+const timelineAdder = { asap:150, standard:0, relaxed:-30 };
+const timelineDays  = { asap:'7-10 days', standard:'14 days', relaxed:'3-4 weeks' };
+const timelineSteps = {
+  asap:     [['Day 1','Discovery & Brief'],['Days 2-3','Design Mockup'],['Days 4-8','Build & Copy'],['Days 9-10','Launch']],
+  standard: [['Day 1','Discovery Call'],['Days 2-4','Design Mockup'],['Days 5-12','Build & Copywrite'],['Day 14','Launch']],
+  relaxed:  [['Week 1','Discovery & Design'],['Week 2','Design Revisions'],['Week 3','Build & Copy'],['Week 4','Review & Launch']]
+};
+
+function selectProp(el, group) {
+  document.querySelectorAll(`[data-group="${group}"]`).forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  propState[group] = el.dataset.val;
+  buildProposal();
+}
+
+function toggleFeat(el) {
+  el.classList.toggle('selected');
+  const val = el.dataset.val;
+  if (el.classList.contains('selected')) {
+    if (!propState.features.includes(val)) propState.features.push(val);
+  } else {
+    propState.features = propState.features.filter(f => f !== val);
+  }
+  buildProposal();
+}
+
+function buildProposal() {
+  const base     = typeBase[propState.type];
+  const featCost = propState.features.reduce((a, f) => a + (featPrice[f] || 0), 0);
+  const tlAdder  = timelineAdder[propState.timeline] || 0;
+  const total    = base.price + featCost + tlAdder;
+
+  // Title
+  const titleEl = document.getElementById('prop-title');
+  if (titleEl) titleEl.textContent = base.label;
+
+  // Line items
+  const linesEl = document.getElementById('prop-lines');
+  if (linesEl) {
+    let lines = `
+      <div class="prop-line"><span class="prop-line-label">Base — ${base.label}</span><span class="prop-line-val">£${base.price}</span></div>
+      <div class="prop-line"><span class="prop-line-label">Pages</span><span class="prop-line-val">${base.pages}</span></div>`;
+
+    if (propState.features.filter(f => featPrice[f] > 0).length > 0) {
+      propState.features.filter(f => featPrice[f] > 0).forEach(f => {
+        lines += `<div class="prop-line"><span class="prop-line-label">+ ${featLabel[f]}</span><span class="prop-line-val">+£${featPrice[f]}</span></div>`;
+      });
+    }
+    if (tlAdder !== 0) {
+      lines += `<div class="prop-line"><span class="prop-line-label">${propState.timeline === 'asap' ? '⚡ Rush timeline' : '🗓 Relaxed timeline'}</span><span class="prop-line-val">${tlAdder > 0 ? '+' : ''}£${tlAdder}</span></div>`;
+    }
+    linesEl.innerHTML = lines;
+  }
+
+  // Total
+  const totalEl = document.getElementById('prop-total');
+  if (totalEl) totalEl.textContent = '£' + total.toLocaleString();
+
+  // Monthly support
+  const monthlyEl = document.getElementById('prop-monthly');
+  if (monthlyEl) {
+    if (propState.support !== 'none') {
+      monthlyEl.style.display = 'block';
+      monthlyEl.querySelector('strong').textContent = supportLabel[propState.support];
+    } else {
+      monthlyEl.style.display = 'none';
+    }
+  }
+
+  // Timeline steps
+  const tlEl = document.getElementById('prop-timeline');
+  if (tlEl) {
+    const steps = timelineSteps[propState.timeline];
+    tlEl.innerHTML = steps.map(([time, label]) => `
+      <div class="prop-tl-item">
+        <div class="prop-tl-dot" style="background:var(--accent)"></div>
+        <span style="color:var(--accent);font-family:'Syne',sans-serif;font-weight:600;min-width:80px">${time}</span>
+        <span>${label}</span>
+      </div>`).join('');
+  }
+
+  // Features included
+  const featEl = document.getElementById('prop-features');
+  if (featEl) {
+    const included = ['Custom Design', 'All Copy Written', 'Mobile Responsive', 'SEO Basics', 'Google Analytics'];
+    propState.features.forEach(f => {
+      if (!included.includes(featLabel[f])) included.push(featLabel[f]);
+    });
+    featEl.innerHTML = included.map(f => `<span class="prop-feat-tag">${f}</span>`).join('');
+  }
+}
+
+function sendProposal() {
+  const name  = document.getElementById('propName')?.value.trim();
+  const email = document.getElementById('propEmail')?.value.trim();
+  if (!name || !email || !email.includes('@')) {
+    showToast('Please enter your name and email to receive the proposal', 'warn'); return;
+  }
+  document.getElementById('prop-sent').style.display = 'block';
+  showToast('Proposal sent to ' + email + '!');
+  setTimeout(() => {
+    document.getElementById('prop-sent').style.display = 'none';
+  }, 5000);
+}
+
+
+</script>
+
+<script>
+(function(){
+  var c=document.getElementById('cur'),r=document.getElementById('cur2');
+  if(!c||!r)return;
+  var mx=0,my=0,rx=0,ry=0,raf;
+  document.addEventListener('mousemove',function(e){
+    mx=e.clientX; my=e.clientY;
+    c.style.left=mx+'px'; c.style.top=my+'px';
+  });
+  function loop(){
+    rx+=(mx-rx)*.1; ry+=(my-ry)*.1;
+    r.style.left=Math.round(rx*10)/10+'px';
+    r.style.top=Math.round(ry*10)/10+'px';
+    raf=requestAnimationFrame(loop);
+  }
+  loop();
+  document.addEventListener('mouseover',function(e){
+    var h=e.target.closest('a,button,input,select,[onclick],.popt,.pkg-card,.review-card,.acc-head,.file-row,.adm-ci,.bar,.dash-card,.adm-btn,.btn-sm,.btn-a,.btn-pkg-o,.btn-pkg-s,.btn-p,.ts,.toggle,.cp-tab,.role-tab,.adm-btn,.prop-step,.srow');
+    if(h){c.style.background='#0062ff';c.style.transform='translate(-50%,-50%) scale(1.5)';r.style.borderColor='rgba(0,98,255,.5)';}
+    else{c.style.background='#0af0a0';c.style.transform='translate(-50%,-50%) scale(1)';r.style.borderColor='rgba(10,240,160,.45)';}
+  });
+  document.addEventListener('mouseleave',function(){c.style.opacity='0';r.style.opacity='0';});
+  document.addEventListener('mouseenter',function(){c.style.opacity='1';r.style.opacity='1';});
+})();
+</script>
+</body>
+</html>
