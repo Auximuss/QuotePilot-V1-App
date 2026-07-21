@@ -547,10 +547,10 @@ async function sendEnquiry(e) {
 
   try {
     // Send via Formspree (free tier — 50 submissions/month)
-    const res = await fetch('https://formspree.io/f/xren1rok', {
+    const res = await fetch('/api/contact', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ name, email, message: msg, _replyto: email, _subject: `Website enquiry from ${name}` })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, message: msg })
     });
 
     if (res.ok) {
