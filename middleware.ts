@@ -10,12 +10,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(new URL("/index.html", request.url));
   }
 
-  // Serve web design page via serverless route (bypasses CDN static cache)
+  // Serve web design page via serverless API route (bypasses CDN static cache)
   if (
     request.nextUrl.pathname === "/web-design.html" ||
     request.nextUrl.pathname === "/design.html"
   ) {
-    return NextResponse.rewrite(new URL("/webdesign", request.url));
+    return NextResponse.rewrite(new URL("/api/design", request.url));
   }
 }
 
