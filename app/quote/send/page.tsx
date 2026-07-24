@@ -338,19 +338,23 @@ function SendPageContent() {
             </p>
 
             <div className="flex flex-col gap-3">
-              {/* Trade */}
+              {/* Trade — highlighted as recommended */}
               <button
                 onClick={() => startCheckout("trade")}
                 disabled={checkoutLoading !== null}
-                className="flex items-center justify-between rounded-2xl border border-line bg-panelRaised px-4 py-3.5 transition-all hover:border-hazard/50 active:scale-[0.97] disabled:opacity-60"
+                className="flex items-center justify-between rounded-2xl border border-hazard/50 bg-gradient-to-r from-hazard/10 to-transparent px-4 py-3.5 transition-all active:scale-[0.97] disabled:opacity-60"
               >
                 <div className="text-left">
-                  <div className="font-barlow text-[15px] font-bold">Trade <span className="ml-1 font-mono text-[12px] font-normal text-textDim">£7.99/mo</span></div>
-                  <div className="mt-0.5 text-[11.5px] text-textDim">50 sent quotes per month</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-barlow text-[15px] font-bold">Trade</span>
+                    <span className="rounded-full bg-hazard/20 px-2 py-0.5 text-[9.5px] font-bold text-hazard">BEST FOR YOU</span>
+                    <span className="font-mono text-[12px] text-textDim">£7.99/mo</span>
+                  </div>
+                  <div className="mt-0.5 text-[11.5px] text-textDim">50 quotes/month — less than £1 per job</div>
                 </div>
                 {checkoutLoading === "trade"
-                  ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-textDim border-t-paper" />
-                  : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-hazard/30 border-t-hazard" />
+                  : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff6a1f" strokeWidth={2}><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                 }
               </button>
 
@@ -358,19 +362,15 @@ function SendPageContent() {
               <button
                 onClick={() => startCheckout("pro")}
                 disabled={checkoutLoading !== null}
-                className="flex items-center justify-between rounded-2xl border border-hazard/50 bg-gradient-to-r from-hazard/10 to-transparent px-4 py-3.5 transition-all active:scale-[0.97] disabled:opacity-60"
+                className="flex items-center justify-between rounded-2xl border border-line bg-panelRaised px-4 py-3.5 transition-all hover:border-hazard/50 active:scale-[0.97] disabled:opacity-60"
               >
                 <div className="text-left">
-                  <div className="flex items-center gap-2">
-                    <span className="font-barlow text-[15px] font-bold">Pro</span>
-                    <span className="rounded-full bg-hazard/20 px-2 py-0.5 text-[9.5px] font-bold text-hazard">MOST POPULAR</span>
-                    <span className="font-mono text-[12px] text-textDim">£14.99/mo</span>
-                  </div>
+                  <div className="font-barlow text-[15px] font-bold">Pro <span className="ml-1 font-mono text-[12px] font-normal text-textDim">£14.99/mo</span></div>
                   <div className="mt-0.5 text-[11.5px] text-textDim">Unlimited quotes, all features</div>
                 </div>
                 {checkoutLoading === "pro"
-                  ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-hazard/30 border-t-hazard" />
-                  : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff6a1f" strokeWidth={2}><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-textDim border-t-paper" />
+                  : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                 }
               </button>
 

@@ -88,5 +88,69 @@ export async function POST(
 
   // Mark as sent
   await supabase.from("quotes").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", id);
+
+  // ── Upgrade nudge: email the tradesperson if they just hit their free limit ──
+  try {
+    const { data: biz2 } = await supabase
+      .from("businesses")
+      .select("id, subscription_tier")
+      .eq("id", quote.business_id)
+      .single();
+
+    const tier = (biz2 as any)?.subscription_tier ?? "free";
+    if (tier === "free") {
+      const monthStart = new Date();
+      monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+      const { count } = await supabase
+        .from("quotes")
+        .select("id", { count: "exact", head: true })
+        .eq("business_id", quote.business_id)
+        .in("status", ["sent", "accepted", "declined"])
+        .gte("sent_at", monthStart.toISOString());
+
+      if (count === 3) {
+        // They just sent their last free quote — get their email
+        const { data: owner } = await supabase.auth.admin.getUserById(
+          (await supabase.from("businesses").select("owner_id").eq("id", quote.business_id).single()).data?.owner_id ?? ""
+        );
+        const ownerEmail = owner?.user?.email;
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://quote-pilot-v1-app.vercel.app";
+
+        if (ownerEmail) {
+          await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              from: "Alex at Demand Pilot <alex@demandpilot.co.uk>",
+              reply_to: "pryeralex492@gmail.com",
+              to: [ownerEmail],
+              subject: "You've used all 3 free quotes — here's what's next",
+              html: `
+                <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
+                  <h2 style="margin:0 0 8px;font-size:20px">You're on a roll 🔥</h2>
+                  <p style="color:#555;font-size:14px;line-height:1.6">
+                    You just sent your 3rd quote this month — you've hit the free plan limit.
+                    To keep sending quotes without waiting until next month, upgrade to Trade for just <strong>£7.99/mo</strong>.
+                  </p>
+                  <p style="color:#555;font-size:14px;line-height:1.6">
+                    That's less than £1 per quote for 50 quotes a month. Most tradespeople make that back on their first job.
+                  </p>
+                  <a href="${siteUrl}/pricing" style="display:block;background:#ff6a1f;color:#fff;text-align:center;padding:14px 24px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;margin:24px 0">
+                    Upgrade to Trade — £7.99/mo →
+                  </a>
+                  <p style="color:#999;font-size:12px;text-align:center">
+                    Questions? Just reply to this email — I read every one. — Alex
+                  </p>
+                </div>
+              `,
+            }),
+          });
+        }
+      }
+    }
+  } catch (_) {
+    // Don't let nudge email failure break the main response
+  }
+
   return NextResponse.json({ sent: true });
 }
