@@ -15,10 +15,19 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
   }
 
+  // Ownership check
+  const { data: callerBiz } = await supabase
+    .from("businesses")
+    .select("id")
+    .eq("owner_id", user.id)
+    .single();
+  if (!callerBiz) return NextResponse.json({ error: "Business not found" }, { status: 404 });
+
   const { data: quote } = await supabase
     .from("quotes")
     .select("*, businesses(name, vat_registered)")
     .eq("id", params.id)
+    .eq("business_id", callerBiz.id)
     .single();
 
   if (!quote) return NextResponse.json({ error: "Not found" }, { status: 404 });

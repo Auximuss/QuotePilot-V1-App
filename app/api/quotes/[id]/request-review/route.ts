@@ -13,11 +13,20 @@ export async function POST(
 
   const supabase = createServiceClient();
 
-  // Get quote + business info
+  // Ownership check
+  const { data: callerBiz } = await supabase
+    .from("businesses")
+    .select("id")
+    .eq("owner_id", user.id)
+    .single();
+  if (!callerBiz) return NextResponse.json({ error: "Business not found" }, { status: 404 });
+
+  // Get quote + business info — scoped to caller's business
   const { data: quote } = await supabase
     .from("quotes")
     .select("customer_name, customer_email, job_title, business_id")
     .eq("id", params.id)
+    .eq("business_id", callerBiz.id)
     .single();
 
   if (!quote) return NextResponse.json({ error: "Quote not found" }, { status: 404 });

@@ -7,10 +7,19 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Ownership check: only the business owner can mark their own quotes complete
+  const { data: callerBiz } = await supabase
+    .from("businesses")
+    .select("id")
+    .eq("owner_id", user.id)
+    .single();
+  if (!callerBiz) return NextResponse.json({ error: "Business not found" }, { status: 404 });
+
   const { data: quote } = await supabase
     .from("quotes")
     .select("*, businesses(name, phone, bank_name, bank_sort_code, bank_account, payment_link, vat_registered, vat_number, payment_terms)")
     .eq("id", params.id)
+    .eq("business_id", callerBiz.id)
     .single();
 
   if (!quote) return NextResponse.json({ error: "Not found" }, { status: 404 });

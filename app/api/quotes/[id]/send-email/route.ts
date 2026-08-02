@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 /*
   Sends a quote link to the customer via email using Resend.
@@ -15,13 +15,27 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const { id } = params;
+
+  // Auth check — must be a logged-in user who owns this quote's business
+  const { data: { user } } = await createClient().auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const supabase = createServiceClient();
 
-  // Fetch quote
+  // Verify ownership: get caller's business first
+  const { data: callerBiz } = await supabase
+    .from("businesses")
+    .select("id")
+    .eq("owner_id", user.id)
+    .single();
+  if (!callerBiz) return NextResponse.json({ error: "Business not found" }, { status: 404 });
+
+  // Fetch quote — scoped to caller's business
   const { data: quote, error: quoteError } = await supabase
     .from("quotes")
     .select("*")
     .eq("id", id)
+    .eq("business_id", callerBiz.id)
     .single();
 
   console.log("[send-email] quote id:", id, "| found:", !!quote, "| error:", quoteError?.message);
