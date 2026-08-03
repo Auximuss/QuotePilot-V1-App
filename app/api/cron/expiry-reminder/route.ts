@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
+import { h } from "@/lib/escapeHtml";
 
 /*
   Vercel Cron — runs once a day at 9am.
@@ -56,17 +57,17 @@ export async function GET(req: NextRequest) {
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
           <h2 style="margin:0 0 4px;font-size:20px">Your quote expires tomorrow</h2>
           <p style="color:#666;margin:0 0 24px;font-size:14px">
-            Just a reminder that your quote from <strong>${businessName}</strong> expires on <strong>${formattedExpiry}</strong>.
+            Just a reminder that your quote from <strong>${h(businessName)}</strong> expires on <strong>${h(formattedExpiry)}</strong>.
           </p>
           <div style="background:#f8f6f3;border-radius:12px;padding:20px;margin-bottom:24px">
             <div style="font-size:13px;color:#888;margin-bottom:2px">Job</div>
-            <div style="font-size:16px;font-weight:600">${q.job_title || "—"}</div>
+            <div style="font-size:16px;font-weight:600">${h(q.job_title) || "—"}</div>
           </div>
           <a href="${siteUrl}/q/${q.id}" style="display:block;background:#ff6a1f;color:#fff;text-align:center;padding:14px 24px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;margin-bottom:16px">
             View &amp; Accept Quote →
           </a>
           <p style="color:#999;font-size:12px;text-align:center">
-            After this date the quote may no longer be valid. Contact ${businessName} if you need more time.
+            After this date the quote may no longer be valid. Contact ${h(businessName)} if you need more time.
           </p>
         </div>
       `,

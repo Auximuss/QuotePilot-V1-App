@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { h } from "@/lib/escapeHtml";
 
 /*
   Sends a quote link to the customer via email using Resend.
@@ -61,8 +62,8 @@ export async function POST(
 
   const html = `
     <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
-      <h2 style="margin:0 0 8px;font-size:20px">${businessName}</h2>
-      <p style="color:#666;margin:0 0 24px;font-size:14px">Quote for: ${quote.job_title || "your job"}</p>
+      <h2 style="margin:0 0 8px;font-size:20px">${h(businessName)}</h2>
+      <p style="color:#666;margin:0 0 24px;font-size:14px">Quote for: ${h(quote.job_title) || "your job"}</p>
       <div style="background:#f8f6f3;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px">
         <div style="font-size:13px;color:#888;margin-bottom:4px">Quote total</div>
         <div style="font-size:32px;font-weight:700;color:#ff6a1f">

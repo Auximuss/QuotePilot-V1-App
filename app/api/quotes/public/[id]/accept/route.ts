@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
+import { h } from "@/lib/escapeHtml";
 
 export async function POST(
   request: NextRequest,
@@ -74,10 +75,10 @@ export async function POST(
                 <p style="color:#666;margin:0 0 24px;font-size:14px">Great news — you've got a confirmed job.</p>
                 <div style="background:#f8f6f3;border-radius:12px;padding:20px;margin-bottom:24px">
                   <div style="font-size:13px;color:#888;margin-bottom:2px">Customer</div>
-                  <div style="font-size:16px;font-weight:600">${quote.customer_name || "—"}</div>
+                  <div style="font-size:16px;font-weight:600">${h(quote.customer_name) || "—"}</div>
                   <div style="font-size:13px;color:#888;margin:12px 0 2px">Job</div>
-                  <div style="font-size:16px;font-weight:600">${quote.job_title || "—"}</div>
-                  ${signatureName ? `<div style="font-size:13px;color:#888;margin:12px 0 2px">Signed by</div><div style="font-size:14px;font-style:italic">${signatureName}</div>` : ""}
+                  <div style="font-size:16px;font-weight:600">${h(quote.job_title) || "—"}</div>
+                  ${signatureName ? `<div style="font-size:13px;color:#888;margin:12px 0 2px">Signed by</div><div style="font-size:14px;font-style:italic">${h(signatureName)}</div>` : ""}
                 </div>
                 <a href="${siteUrl}/quote/send?id=${params.id}" style="display:block;background:#ff6a1f;color:#fff;text-align:center;padding:14px 24px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;margin-bottom:16px">
                   View quote →

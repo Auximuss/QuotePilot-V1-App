@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
 import { quoteTotal, depositAmountFor } from "@/lib/types";
+import { h } from "@/lib/escapeHtml";
 
 export async function POST(
   _req: NextRequest,
@@ -52,15 +53,15 @@ export async function POST(
 
   if (customerEmail) {
     const paymentSection = biz.payment_link
-      ? `<a href="${biz.payment_link}" style="display:block;background:#ff6a1f;color:#fff;text-align:center;padding:14px 24px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;margin:20px 0">Pay £${finalAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })} →</a>`
+      ? `<a href="${h(biz.payment_link)}" style="display:block;background:#ff6a1f;color:#fff;text-align:center;padding:14px 24px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;margin:20px 0">Pay £${finalAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })} →</a>`
       : biz.bank_account
       ? `<div style="background:#f8f6f3;border-radius:12px;padding:16px;margin:16px 0;font-size:13px">
           <strong>Bank transfer details:</strong><br/>
-          ${biz.bank_name ? `Bank: ${biz.bank_name}<br/>` : ""}
-          ${biz.bank_sort_code ? `Sort code: ${biz.bank_sort_code}<br/>` : ""}
-          Account: ${biz.bank_account}
+          ${biz.bank_name ? `Bank: ${h(biz.bank_name)}<br/>` : ""}
+          ${biz.bank_sort_code ? `Sort code: ${h(biz.bank_sort_code)}<br/>` : ""}
+          Account: ${h(biz.bank_account)}
          </div>`
-      : `<p style="color:#666;font-size:14px">Please contact ${biz.name} to arrange payment.</p>`;
+      : `<p style="color:#666;font-size:14px">Please contact ${h(biz.name)} to arrange payment.</p>`;
 
     await sendEmail({
       to: customerEmail,
@@ -69,11 +70,11 @@ export async function POST(
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
           <h2 style="margin:0 0 4px;font-size:22px">Final payment due</h2>
           <p style="color:#666;margin:0 0 24px;font-size:14px">
-            Your job is complete — thank you for choosing ${biz.name}!
+            Your job is complete — thank you for choosing ${h(biz.name)}!
           </p>
           <div style="background:#f8f6f3;border-radius:12px;padding:20px;margin-bottom:16px">
             <div style="font-size:13px;color:#888;margin-bottom:2px">Job</div>
-            <div style="font-size:16px;font-weight:600">${quoteRow.job_title || "—"}</div>
+            <div style="font-size:16px;font-weight:600">${h(quoteRow.job_title) || "—"}</div>
             <div style="font-size:13px;color:#888;margin:12px 0 2px">Total quote</div>
             <div style="font-size:15px">£${total.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</div>
             ${quoteRow.deposit_requested ? `

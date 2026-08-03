@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
+import { h } from "@/lib/escapeHtml";
 
 export async function GET() {
   const supabase = createServiceClient();
@@ -28,17 +29,17 @@ export async function GET() {
       html: `
         <div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#1a1a1a">
           <h2 style="color:#ff6a1f">Friendly Payment Reminder</h2>
-          <p>Hi ${q.customer_name ?? "there"},</p>
+          <p>Hi ${h(q.customer_name) || "there"},</p>
           <p>We just wanted to send a friendly reminder that payment of <strong>£${total.toLocaleString("en-GB")}</strong> is outstanding for:</p>
-          <p style="background:#f5f5f5;padding:12px;border-radius:8px"><strong>${q.job_title ?? "Your recent job"}</strong><br>${q.address ?? ""}</p>
+          <p style="background:#f5f5f5;padding:12px;border-radius:8px"><strong>${h(q.job_title) || "Your recent job"}</strong><br>${h(q.address)}</p>
           ${q.stripe_payment_link ? `
           <p style="margin:20px 0">
-            <a href="${q.stripe_payment_link}" style="background:#ff6a1f;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">
+            <a href="${h(q.stripe_payment_link)}" style="background:#ff6a1f;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">
               Pay Now — £${total.toLocaleString("en-GB")}
             </a>
           </p>` : ""}
           <p>If you have any questions, please don't hesitate to get in touch.</p>
-          <p>Thank you,<br><strong>${biz?.name ?? ""}</strong>${biz?.phone ? `<br>${biz.phone}` : ""}</p>
+          <p>Thank you,<br><strong>${h(biz?.name)}</strong>${biz?.phone ? `<br>${h(biz.phone)}` : ""}</p>
         </div>
       `,
     });
