@@ -67,14 +67,6 @@ function ReviewPageContent() {
       .then(d => { if (d.photos?.length) setPhotos(d.photos.map((url: string) => ({ url }))); })
       .catch(() => {});
 
-    // VAT setting
-    sb().from("businesses").select("vat_registered, vat_number").eq("owner_id", (async () => {
-      const { data: { user } } = await sb().auth.getUser();
-      return user?.id ?? "";
-    })()).single().then(({ data }) => {
-      if (data) { setVatRegistered(!!data.vat_registered); setVatNumber(data.vat_number ?? ""); }
-    });
-
     // Templates
     fetch("/api/templates").then(r => r.json()).then(d => setTemplates(d.templates ?? [])).catch(() => {});
 
@@ -168,9 +160,13 @@ function ReviewPageContent() {
   const labour = quote.lineItems.filter(l => l.category === "labour");
   const materialTotal = materials.reduce((s, l) => s + l.price, 0);
   const labourTotal = labour.reduce((s, l) => s + l.price, 0);
-  const labourPct = total > 0 ? Math.round((labourTotal / total) * 100) : 0;
-  const vatAmount = vatRegistered ? Math.round(total * 0.2) : 0;
-  const totalIncVat = total + vatAmount;
+  // When wastage is on, add 10% to materials in the displayed total only —
+  // DB prices stay at base; the wastage multiplier is applied at send time.
+  const wastageExtra = wastageOn ? materials.reduce((s, l) => s + Math.ceil(l.price * 0.1), 0) : 0;
+  const displayTotal = total + wastageExtra;
+  const labourPct = displayTotal > 0 ? Math.round((labourTotal / displayTotal) * 100) : 0;
+  const vatAmount = vatRegistered ? Math.round(displayTotal * 0.2) : 0;
+  const totalIncVat = displayTotal + vatAmount;
 
   const confidenceColor = quote.confidence >= 85 ? "text-ok" : quote.confidence >= 60 ? "text-warn" : "text-hazard";
 
@@ -233,7 +229,7 @@ function ReviewPageContent() {
   }
 
   function loadTemplate(tpl: Template) {
-    createDraftFromAi({
+    const newId = createDraftFromAi({
       job_title: tpl.job_title,
       customer_summary: "",
       scope_of_work: [],
@@ -249,6 +245,7 @@ function ReviewPageContent() {
       confidence: 100,
     });
     setShowTemplates(false);
+    router.push(`/quote/review?id=${newId}`);
   }
 
   const benchmarkColour = benchmark?.rating === "low" ? "text-ok" : benchmark?.rating === "fair" ? "text-blue-400" : "text-warn";
@@ -405,7 +402,14 @@ function ReviewPageContent() {
           <LineRow
             key={item.id}
             item={wastageOn ? { ...item, meta: item.meta ? `${item.meta} (+10% wastage)` : "+10% wastage", price: Math.ceil(item.price * 1.1) } : item}
-            onSavePrice={handlePriceSave}
+            onSavePrice={wastageOn
+              // De-inflate before saving so the DB always holds the base price.
+              // The user is editing the 1.1× display value; we reverse the rounding
+              // to recover the original. Math.round(p / 1.1) is exact for all
+              // prices that came through Math.ceil(x * 1.1).
+              ? (id, p) => handlePriceSave(id, Math.round(p / 1.1))
+              : handlePriceSave
+            }
             onSaveDesc={(id, d) => updateLineItemDesc(quote.id, id, d)}
             onDelete={id => removeLineItem(quote.id, id)}
           />
@@ -449,7 +453,7 @@ function ReviewPageContent() {
               {vatRegistered ? "Total (inc VAT)" : t.quote.total}
             </span>
             <span className="font-barlow text-2xl font-bold text-hazard">
-              £{(vatRegistered ? totalIncVat : total).toLocaleString("en-GB")}
+              £{(vatRegistered ? totalIncVat : displayTotal).toLocaleString("en-GB")}
             </span>
           </div>
         </div>

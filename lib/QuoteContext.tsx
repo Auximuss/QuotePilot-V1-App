@@ -428,27 +428,24 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
   }
 
   function updateLineItemPrice(quoteId: string, itemId: string, price: number) {
-    // Update local state AND compute the new total inside the same callback
-    // so we always have the correct accumulated sum — never stale state.
-    let newTotal = 0;
-    let lineItemDesc = "";
-    let lineItemCategory: "material" | "labour" = "labour";
+    // Compute derived values synchronously from current state BEFORE calling
+    // setQuotes — React batches state updates so the updater runs later,
+    // meaning any lets captured inside it would still be 0/"" by the time
+    // the Supabase writes execute.
+    const quote = quotes.find((q) => q.id === quoteId);
+    const target = quote?.lineItems.find((li) => li.id === itemId);
+    const lineItemDesc = target?.desc ?? "";
+    const lineItemCategory = target?.category ?? "labour";
+    const newTotal = (quote?.lineItems ?? [])
+      .map((li) => (li.id === itemId ? price : li.price))
+      .reduce((sum, p) => sum + p, 0);
 
-    setQuotes((prev) => {
-      return prev.map((q) => {
+    setQuotes((prev) =>
+      prev.map((q) => {
         if (q.id !== quoteId) return q;
-        const updatedItems = q.lineItems.map((li) =>
-          li.id === itemId ? { ...li, price } : li
-        );
-        newTotal = updatedItems.reduce((sum, li) => sum + li.price, 0);
-        const target = q.lineItems.find((li) => li.id === itemId);
-        if (target) {
-          lineItemDesc = target.desc;
-          lineItemCategory = target.category;
-        }
-        return { ...q, lineItems: updatedItems };
-      });
-    });
+        return { ...q, lineItems: q.lineItems.map((li) => li.id === itemId ? { ...li, price } : li) };
+      })
+    );
 
     // Update line item price in DB
     supabase
@@ -459,7 +456,7 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
         if (error) console.error("Failed to save price edit:", error);
       });
 
-    // Update quote total in DB using the correctly accumulated newTotal
+    // Update quote total in DB
     supabase
       .from("quotes")
       .update({ subtotal: newTotal, total: newTotal })

@@ -621,7 +621,7 @@ function SendPageContent() {
                 {t.quote.sendViaEmail}
               </button>
               <button
-                onClick={() => { navigator.clipboard.writeText(shareUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); markSent(quote.id); setSendState("sent"); }}
+                onClick={() => { if (atLimit && quote.status === "draft") { setShowPaywall(true); return; } navigator.clipboard.writeText(shareUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); markSent(quote.id); setSendState("sent"); }}
                 className={`flex flex-none items-center justify-center gap-1 rounded-lg px-3 py-2.5 font-barlow text-[13px] font-bold uppercase tracking-wide transition-colors ${copied ? "bg-ok text-[#0d1a10]" : "bg-[#221d14] border border-[#3a3526] text-paper"}`}
               >
                 {copied ? "✓" : (

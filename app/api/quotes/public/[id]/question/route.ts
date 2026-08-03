@@ -38,8 +38,8 @@ export async function POST(
   });
 
   if (error) {
-    // Don't fail the customer — log it server-side
     console.error("Failed to save customer question:", error);
+    return NextResponse.json({ error: "Failed to save question. Please try again." }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });
