@@ -1,15 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-const SUPABASE_URL = "https://mppnrqtfcbapkohsogap.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wcG5ycXRmY2JhcGtvaHNvZ2FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNzkzMzYsImV4cCI6MjA5ODc1NTMzNn0.QG5fNZyOs03OOyQa03mb067Gg2lAg0EVPD4lDdYyKG0";
-
 export function createClient() {
   const cookieStore = cookies();
 
   return createServerClient(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
@@ -30,14 +27,14 @@ export function createClient() {
   );
 }
 
-const SUPABASE_SERVICE_ROLE_KEY = "sb_secret_5B11OY8W0KD1zzg-Z_W1ng_LZhGwAPm";
-
-// Service-role client — SERVER-SIDE ONLY
+// Service-role client — SERVER-SIDE ONLY.
+// SUPABASE_SERVICE_ROLE_KEY has no NEXT_PUBLIC_ prefix so Next.js
+// never bundles it into client code.
 export function createServiceClient() {
   const { createClient: createSupabaseClient } = require("@supabase/supabase-js");
   return createSupabaseClient(
-    SUPABASE_URL,
-    SUPABASE_SERVICE_ROLE_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false } }
   );
 }
