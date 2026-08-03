@@ -41,6 +41,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No audio file received." }, { status: 400 });
     }
 
+    const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
+    if (audioFile.size > MAX_AUDIO_BYTES) {
+      return NextResponse.json({ error: "Audio file too large. Maximum 10 MB." }, { status: 400 });
+    }
+
     const transcription = await openai.audio.transcriptions.create({
       file: audioFile,
       model: "whisper-1",

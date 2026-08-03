@@ -86,6 +86,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing 'transcript' string in request body." }, { status: 400 });
   }
 
+  if (transcript.length > 5000) {
+    return NextResponse.json({ error: "Transcript too long. Maximum 5,000 characters." }, { status: 400 });
+  }
+
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
