@@ -204,7 +204,7 @@ function ReviewPageContent() {
   }
 
   async function addUpsellItem(u: UpsellSuggestion) {
-    addLineItem(quote!.id, "labour");
+    addLineItem(quote!.id, "labour", u.description, u.estimatedPrice);
     setUpsells(prev => prev.filter(x => x.description !== u.description));
   }
 

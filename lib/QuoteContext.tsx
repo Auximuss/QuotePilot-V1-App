@@ -79,7 +79,7 @@ type QuoteContextValue = {
   unseenAcceptedQuotes: Quote[];
   dismissAcceptanceBanner: (quoteId: string) => void;
   stats: Stats;
-  addLineItem: (quoteId: string, category: "material" | "labour") => void;
+  addLineItem: (quoteId: string, category: "material" | "labour", desc?: string, price?: number) => void;
   removeLineItem: (quoteId: string, itemId: string) => void;
   updateLineItemDesc: (quoteId: string, itemId: string, desc: string) => void;
   duplicateQuote: (quoteId: string) => Promise<string>;
@@ -611,15 +611,15 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
     if (error) console.error("Failed to save settings:", error);
   }
 
-  function addLineItem(quoteId: string, category: "material" | "labour") {
+  function addLineItem(quoteId: string, category: "material" | "labour", desc = "New item", price = 0) {
     const itemId = crypto.randomUUID();
-    const newItem: LineItem = { id: itemId, category, desc: "New item", meta: "", price: 0 };
+    const newItem: LineItem = { id: itemId, category, desc, meta: "", price };
     setQuotes((prev) =>
       prev.map((q) => q.id !== quoteId ? q : { ...q, lineItems: [...q.lineItems, newItem] })
     );
     supabase.from("quote_line_items").insert({
       id: itemId, quote_id: quoteId, category,
-      description: "New item", meta: "", unit_price: 0, total_price: 0,
+      description: desc, meta: "", unit_price: price, total_price: price,
       sort_order: 999,
     }).then(({ error }) => { if (error) console.error("addLineItem:", error); });
   }
