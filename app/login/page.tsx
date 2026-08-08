@@ -66,7 +66,7 @@ export default function AuthPage() {
 
       if (!res.ok) {
         setLoading(false);
-        setError(json.error_description || json.msg || json.error || "Login failed. Check your email and password.");
+        setError(`[${res.status}] ${JSON.stringify(json).substring(0, 300)}`);
         return;
       }
 
