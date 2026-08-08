@@ -5,9 +5,16 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PrimaryButton from "@/components/PrimaryButton";
 
+function clearSupabaseStorage() {
+  try {
+    Object.keys(localStorage).forEach((k) => {
+      if (k.startsWith("sb-") || k.includes("supabase")) localStorage.removeItem(k);
+    });
+  } catch {}
+}
+
 export default function AuthPage() {
   const router = useRouter();
-  const supabase = createClient();
   const [inAppBrowser, setInAppBrowser] = useState(false);
 
   useEffect(() => {
@@ -16,6 +23,9 @@ export default function AuthPage() {
     if (/FBAN|FBAV|Instagram|LinkedInApp|line\/|KAKAOTALK/i.test(ua)) {
       setInAppBrowser(true);
     }
+
+    // Clear any corrupted/expired Supabase session from localStorage on mount.
+    clearSupabaseStorage();
   }, []);
 
   const [tab, setTab] = useState<"login" | "signup">("login");
@@ -30,7 +40,12 @@ export default function AuthPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    // Always wipe stale/corrupted session data and create a fresh client.
+    // The "string did not match the expected pattern" error comes from the old
+    // client instance reading a broken PKCE verifier or expired token from storage.
+    clearSupabaseStorage();
+    const freshClient = createClient();
+    const { error } = await freshClient.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
       setError(error.message);
