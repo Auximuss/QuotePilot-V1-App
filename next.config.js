@@ -11,6 +11,19 @@ const nextConfig = {
       { source: '/', destination: '/index.html' },
     ];
   },
+  async headers() {
+    return [
+      {
+        // Tell browsers never to cache Next.js JS bundles with stale content
+        source: '/(.*)',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
+        ],
+      },
+    ];
+  },
   webpack: (config, { webpack, nextRuntime }) => {
     // @next/env (bundled into Edge middleware by Next.js) references __dirname,
     // which doesn't exist in the Edge runtime. Polyfill it to prevent the
