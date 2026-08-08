@@ -42,23 +42,36 @@ export default function AuthPage() {
     setLoading(true);
     clearSupabaseStorage();
 
-    const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      // Call our server-side proxy — never returns HTML, always JSON
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (authError) {
-      setLoading(false);
-      // "Invalid login credentials" → friendlier message
-      if (authError.message.toLowerCase().includes("invalid") || authError.message.toLowerCase().includes("credentials")) {
-        setError("Incorrect email or password. Please try again.");
-      } else {
-        setError(authError.message || "Login failed. Please try again.");
+      const data = await res.json();
+
+      if (!res.ok) {
+        setLoading(false);
+        setError(data.error || "Login failed. Please try again.");
+        return;
       }
-      return;
-    }
 
-    setLoading(false);
-    router.push("/home");
-    router.refresh();
+      // Tell the Supabase browser client about the new session
+      const supabase = createClient();
+      await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
+
+      setLoading(false);
+      router.push("/home");
+      router.refresh();
+    } catch {
+      setLoading(false);
+      setError("Connection error. Please check your internet and try again.");
+    }
   }
 
   async function handleSignup(e: React.FormEvent) {
@@ -161,7 +174,7 @@ export default function AuthPage() {
 
       {tab === "login" ? (
         <form className="flex flex-col gap-3.5" onSubmit={handleLogin}>
-          <div className="font-barlow text-2xl font-bold leading-tight">Welcome back <span className="text-[10px] text-textDimmer font-mono">v5</span></div>
+          <div className="font-barlow text-2xl font-bold leading-tight">Welcome back <span className="text-[10px] text-textDimmer font-mono">v6</span></div>
           <p className="mb-1 text-xs text-textDim">Log in to pick up where you left off</p>
 
           <Field label="Email" type="email" value={email} onChange={setEmail} />
