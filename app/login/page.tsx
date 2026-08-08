@@ -188,7 +188,7 @@ export default function AuthPage() {
 
       {tab === "login" ? (
         <form className="flex flex-col gap-3.5" onSubmit={handleLogin}>
-          <div className="font-barlow text-2xl font-bold leading-tight">Welcome back</div>
+          <div className="font-barlow text-2xl font-bold leading-tight">Welcome back <span className="text-[10px] text-textDimmer font-mono">v4</span></div>
           <p className="mb-1 text-xs text-textDim">Log in to pick up where you left off</p>
 
           <Field label="Email" type="email" value={email} onChange={setEmail} />
