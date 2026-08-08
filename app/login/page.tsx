@@ -40,19 +40,54 @@ export default function AuthPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    // Always wipe stale/corrupted session data and create a fresh client.
-    // The "string did not match the expected pattern" error comes from the old
-    // client instance reading a broken PKCE verifier or expired token from storage.
     clearSupabaseStorage();
-    const freshClient = createClient();
-    const { error } = await freshClient.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) {
-      setError(error.message);
-      return;
+
+    const SUPA_URL = "https://mppnrqtfcbapkohsogap.supabase.co";
+    const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wcG5ycXRmY2JhcGtvaHNvZ2FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNzkzMzYsImV4cCI6MjA5ODc1NTMzNn0.QG5fNZyOs03OOyQa03mb067Gg2lAg0EVPD4lDdYyKG0";
+
+    try {
+      const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPA_KEY,
+          Authorization: `Bearer ${SUPA_KEY}`,
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const text = await res.text();
+      let json: any;
+      try { json = JSON.parse(text); } catch {
+        setLoading(false);
+        setError("Could not reach the server. Please check your connection and try again.");
+        return;
+      }
+
+      if (!res.ok) {
+        setLoading(false);
+        setError(json.error_description || json.msg || json.error || "Login failed. Check your email and password.");
+        return;
+      }
+
+      // Store session so the rest of the app picks it up
+      const sessionKey = `sb-mppnrqtfcbapkohsogap-auth-token`;
+      localStorage.setItem(sessionKey, JSON.stringify({
+        access_token: json.access_token,
+        refresh_token: json.refresh_token,
+        expires_at: Math.floor(Date.now() / 1000) + (json.expires_in ?? 3600),
+        expires_in: json.expires_in ?? 3600,
+        token_type: json.token_type ?? "bearer",
+        user: json.user,
+      }));
+
+      setLoading(false);
+      router.push("/home");
+      router.refresh();
+    } catch (err: any) {
+      setLoading(false);
+      setError("Could not reach the server. Please check your connection and try again.");
     }
-    router.push("/home");
-    router.refresh();
   }
 
   async function handleSignup(e: React.FormEvent) {
