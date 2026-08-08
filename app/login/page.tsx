@@ -60,7 +60,7 @@ export default function AuthPage() {
       let json: any;
       try { json = JSON.parse(text); } catch {
         setLoading(false);
-        setError("Could not reach the server. Please check your connection and try again.");
+        setError("Login service unavailable. Please try again in a moment. (ref: v2)");
         return;
       }
 
@@ -125,7 +125,7 @@ export default function AuthPage() {
       return;
     }
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: signInError } = await createClient().auth.signInWithPassword({ email, password });
     if (signInError) {
       setLoading(false);
       setError("Account created! Please log in.");
