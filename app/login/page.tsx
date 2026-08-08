@@ -42,52 +42,23 @@ export default function AuthPage() {
     setLoading(true);
     clearSupabaseStorage();
 
-    const SUPA_URL = "https://mppnrqtfcbapkohsogap.supabase.co";
-    const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wcG5ycXRmY2JhcGtvaHNvZ2FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNzkzMzYsImV4cCI6MjA5ODc1NTMzNn0.QG5fNZyOs03OOyQa03mb067Gg2lAg0EVPD4lDdYyKG0";
+    const supabase = createClient();
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
-    try {
-      const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: SUPA_KEY,
-          Authorization: `Bearer ${SUPA_KEY}`,
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const text = await res.text();
-      let json: any;
-      try { json = JSON.parse(text); } catch {
-        setLoading(false);
-        setError("Login service unavailable. Please try again in a moment. (ref: v2)");
-        return;
-      }
-
-      if (!res.ok) {
-        setLoading(false);
-        setError(`[${res.status}] ${JSON.stringify(json).substring(0, 300)}`);
-        return;
-      }
-
-      // Store session so the rest of the app picks it up
-      const sessionKey = `sb-mppnrqtfcbapkohsogap-auth-token`;
-      localStorage.setItem(sessionKey, JSON.stringify({
-        access_token: json.access_token,
-        refresh_token: json.refresh_token,
-        expires_at: Math.floor(Date.now() / 1000) + (json.expires_in ?? 3600),
-        expires_in: json.expires_in ?? 3600,
-        token_type: json.token_type ?? "bearer",
-        user: json.user,
-      }));
-
+    if (authError) {
       setLoading(false);
-      router.push("/home");
-      router.refresh();
-    } catch (err: any) {
-      setLoading(false);
-      setError("Could not reach the server. Please check your connection and try again.");
+      // "Invalid login credentials" → friendlier message
+      if (authError.message.toLowerCase().includes("invalid") || authError.message.toLowerCase().includes("credentials")) {
+        setError("Incorrect email or password. Please try again.");
+      } else {
+        setError(authError.message || "Login failed. Please try again.");
+      }
+      return;
     }
+
+    setLoading(false);
+    router.push("/home");
+    router.refresh();
   }
 
   async function handleSignup(e: React.FormEvent) {
@@ -113,15 +84,17 @@ export default function AuthPage() {
         },
         body: JSON.stringify({ email, password, data: { business_name: businessName, trade } }),
       });
-      const json = await res.json();
+      const text = await res.text();
+      let json: any = {};
+      try { json = JSON.parse(text); } catch { /* ignore parse error */ }
       if (!res.ok) {
         setLoading(false);
-        setError(json.error_description || json.msg || json.error || "Signup failed");
+        setError(json.error_description || json.msg || json.error || "Signup failed. Please try again.");
         return;
       }
     } catch (e: any) {
       setLoading(false);
-      setError(`URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL} | ${e.message}`);
+      setError("Could not reach the sign-up service. Check your connection and try again.");
       return;
     }
 
@@ -188,7 +161,7 @@ export default function AuthPage() {
 
       {tab === "login" ? (
         <form className="flex flex-col gap-3.5" onSubmit={handleLogin}>
-          <div className="font-barlow text-2xl font-bold leading-tight">Welcome back <span className="text-[10px] text-textDimmer font-mono">v4</span></div>
+          <div className="font-barlow text-2xl font-bold leading-tight">Welcome back <span className="text-[10px] text-textDimmer font-mono">v5</span></div>
           <p className="mb-1 text-xs text-textDim">Log in to pick up where you left off</p>
 
           <Field label="Email" type="email" value={email} onChange={setEmail} />
