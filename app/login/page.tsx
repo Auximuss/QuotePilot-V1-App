@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PrimaryButton from "@/components/PrimaryButton";
@@ -8,6 +8,15 @@ import PrimaryButton from "@/components/PrimaryButton";
 export default function AuthPage() {
   const router = useRouter();
   const supabase = createClient();
+  const [inAppBrowser, setInAppBrowser] = useState(false);
+
+  useEffect(() => {
+    const ua = navigator.userAgent || "";
+    // Facebook, Instagram, LinkedIn and other in-app browsers break Supabase auth
+    if (/FBAN|FBAV|Instagram|LinkedInApp|line\/|KAKAOTALK/i.test(ua)) {
+      setInAppBrowser(true);
+    }
+  }, []);
 
   const [tab, setTab] = useState<"login" | "signup">("login");
   const [trade, setTrade] = useState("General Building");
@@ -77,6 +86,23 @@ export default function AuthPage() {
     setLoading(false);
     router.push("/home");
     router.refresh();
+  }
+
+  if (inAppBrowser) {
+    return (
+      <div className="bp-grid flex min-h-screen flex-col items-center justify-center px-6 py-10 text-center">
+        <div className="mb-6">
+          <span className="font-barlow text-2xl font-bold tracking-tight">Demand <span className="text-hazard">Pilot</span></span>
+        </div>
+        <div className="rounded-xl border border-warn/40 bg-warn/10 px-5 py-6">
+          <div className="mb-2 text-[15px] font-semibold text-paper">Open in your browser</div>
+          <div className="mb-4 text-[12px] leading-relaxed text-textDim">
+            This app doesn't work correctly inside Facebook or Instagram. Tap the menu (⋯) and choose <strong className="text-paper">Open in Safari</strong> or <strong className="text-paper">Open in Chrome</strong>.
+          </div>
+          <div className="font-mono text-[11px] text-textDimmer">quote-pilot-v1-app.vercel.app</div>
+        </div>
+      </div>
+    );
   }
 
   return (
