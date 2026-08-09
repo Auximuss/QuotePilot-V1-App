@@ -86,6 +86,8 @@ export default function AdminPage() {
   const [addingLead, setAddingLead] = useState(false);
   const [expandedLead, setExpandedLead] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const terminalEndRef = useRef<HTMLDivElement>(null);
+  const detailTerminalEndRef = useRef<HTMLDivElement>(null);
 
   // Rename / delete tickets
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -110,6 +112,23 @@ export default function AdminPage() {
   }, [tab]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [activeConv?.messages.length]);
+
+  // Live-poll logs every 2s while any agent is running
+  useEffect(() => {
+    if (!runningAgent) return;
+    const id = setInterval(() => {
+      fetch("/api/admin/agents/logs")
+        .then(r => r.json())
+        .then(d => setAgentLogs(d.logs ?? []));
+    }, 2000);
+    return () => clearInterval(id);
+  }, [runningAgent]);
+
+  // Auto-scroll both terminals when logs change
+  useEffect(() => {
+    terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    detailTerminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [agentLogs.length]);
 
   async function loadSupport() {
     setSupportLoading(true);
@@ -663,23 +682,65 @@ export default function AdminPage() {
         {/* ── Agents ────────────────────────────────────────────────────────── */}
         {tab === "agents" && (() => {
           const AGENTS = [
-            { id: "scout",    name: "Scout",    role: "Lead Finder",      accent: "#3b82f6", icon: "⬡", desc: "Searches for real UK tradespeople daily across rotating cities, extracts websites and emails via Hunter.io." },
-            { id: "writer",   name: "Writer",   role: "Email Generator",  accent: "#a855f7", icon: "✦", desc: "Picks up every new lead and uses GPT-4o to write a personalised cold email tailored to their trade and location." },
-            { id: "sender",   name: "Sender",   role: "Outreach Queue",   accent: "#ff6a1f", icon: "➤", desc: "Fires every ready email via Resend, marks leads sent with a timestamp, paces sends to avoid spam filters." },
-            { id: "reporter", name: "Reporter", role: "Daily Briefing",   accent: "#22c55e", icon: "◈", desc: "Emails you a full pipeline summary every morning — leads found, emails sent, replies, signups, conversion rate." },
+            {
+              id: "scout", name: "Scout", role: "Lead Finder", accent: "#3b82f6", icon: "⬡",
+              desc: "Searches for real UK tradespeople daily across rotating cities, extracts websites and emails via Hunter.io.",
+              steps: ["Pick today's city + trade", "GPT generates 20 candidates", "Verify each domain is live", "Hunter.io email lookup", "Store up to 10 new leads"],
+            },
+            {
+              id: "writer", name: "Writer", role: "Email Generator", accent: "#a855f7", icon: "✦",
+              desc: "Picks up every new lead and uses GPT-4o to write a personalised cold email tailored to their trade and location.",
+              steps: ["Load all 'new' leads", "GPT writes personalised email per lead", "Save email body + subject", "Mark lead as 'email_ready'"],
+            },
+            {
+              id: "sender", name: "Sender", role: "Outreach Queue", accent: "#ff6a1f", icon: "➤",
+              desc: "Fires every ready email via Resend, marks leads sent with a timestamp, paces sends to avoid spam filters.",
+              steps: ["Load 'email_ready' leads", "Send each email via Resend", "Mark lead as 'email_sent'", "Pace sends to avoid spam filters"],
+            },
+            {
+              id: "reporter", name: "Reporter", role: "Daily Briefing", accent: "#22c55e", icon: "◈",
+              desc: "Emails you a full pipeline summary every morning — leads found, emails sent, replies, signups, conversion rate.",
+              steps: ["Count leads at each pipeline stage", "Calculate reply + conversion rates", "Email daily report to you"],
+            },
           ] as const;
 
           const agentColours: Record<string, string> = { Scout: "#3b82f6", Writer: "#a855f7", Sender: "#ff6a1f", Reporter: "#22c55e", Pipeline: "#22c55e" };
           const statusColours: Record<string, string> = { new: "#6b7280", no_email: "#374151", email_ready: "#3b82f6", email_sent: "#ff6a1f", replied: "#22c55e", signed_up: "#a855f7" };
           const statusLabels: Record<string, string> = { new: "New", no_email: "No Email", email_ready: "Ready", email_sent: "Sent", replied: "Replied", signed_up: "Signed Up" };
 
+          // Guess current step from latest log message
+          function guessStep(agentId: string, latestMsg: string): number {
+            const msg = latestMsg.toLowerCase();
+            if (agentId === "scout") {
+              if (msg.includes("gpt")) return 1;
+              if (msg.includes("verif") || msg.includes("domain")) return 2;
+              if (msg.includes("hunter") || msg.includes("email")) return 3;
+              if (msg.includes("stored") || msg.includes("✓") || msg.includes("◎")) return 4;
+            }
+            if (agentId === "writer") {
+              if (msg.includes("writing")) return 0;
+              if (msg.includes("email ready") || msg.includes("ready for")) return 2;
+            }
+            if (agentId === "sender") {
+              if (msg.includes("sending")) return 0;
+              if (msg.includes("sent to")) return 2;
+            }
+            if (agentId === "reporter") {
+              if (msg.includes("report sent")) return 2;
+            }
+            return 0;
+          }
+
           // ── Agent detail view ──────────────────────────────────────────────────
           if (selectedAgent) {
             const agent = AGENTS.find(a => a.id === selectedAgent)!;
+            const isRunning = runningAgent === agent.id || runningAgent === "pipeline";
             const myLogs = agentLogs.filter(l => l.agent.toLowerCase() === agent.name.toLowerCase());
             const successCount = myLogs.filter(l => l.type === "success").length;
             const errorCount = myLogs.filter(l => l.type === "error").length;
             const lastRun = myLogs[0]?.created_at;
+            const latestLog = myLogs[0];
+            const currentStep = isRunning && latestLog ? guessStep(agent.id, latestLog.message) : -1;
 
             return (
               <div className="space-y-3">
@@ -712,6 +773,16 @@ export default function AdminPage() {
                       {isRunning ? "Running…" : "▶ Run"}
                     </button>
                   </div>
+
+                  {/* Live action banner */}
+                  {isRunning && latestLog && (
+                    <div className="mt-3 rounded-xl px-3 py-2.5 flex items-center gap-2"
+                      style={{ backgroundColor: `${agent.accent}10`, border: `1px solid ${agent.accent}25` }}>
+                      <span className="animate-pulse text-[8px]" style={{ color: agent.accent }}>●</span>
+                      <span className="font-mono text-[10px] text-textDim truncate">{latestLog.message}</span>
+                    </div>
+                  )}
+
                   <div className="mt-4 grid grid-cols-4 gap-3 border-t pt-4" style={{ borderColor: `${agent.accent}20` }}>
                     {[
                       { label: "Logs", value: myLogs.length, c: agent.accent },
@@ -727,6 +798,32 @@ export default function AdminPage() {
                   </div>
                 </div>
 
+                {/* Step-by-step breakdown */}
+                <div className="rounded-2xl border border-[#1e2025] bg-[#0d0f11] p-4">
+                  <div className="mb-3 font-mono text-[9px] uppercase tracking-widest text-textDimmer">What this agent does</div>
+                  <div className="space-y-1.5">
+                    {agent.steps.map((step, i) => {
+                      const isCurrent = isRunning && i === currentStep;
+                      const isDone = isRunning ? i < currentStep : false;
+                      return (
+                        <div key={i} className={`flex items-center gap-3 rounded-xl px-3 py-2 transition-all ${isCurrent ? "bg-white/[0.04]" : ""}`}
+                          style={{ borderLeft: isCurrent ? `2px solid ${agent.accent}` : "2px solid transparent" }}>
+                          <div className={`flex h-5 w-5 flex-none items-center justify-center rounded-full font-mono text-[9px] font-bold`}
+                            style={{
+                              backgroundColor: isCurrent ? `${agent.accent}20` : isDone ? "#22c55e15" : "#1a1c21",
+                              color: isCurrent ? agent.accent : isDone ? "#22c55e" : "#4a4d56",
+                              border: `1px solid ${isCurrent ? `${agent.accent}50` : isDone ? "#22c55e30" : "#2a2d35"}`,
+                            }}>
+                            {isDone ? "✓" : i + 1}
+                          </div>
+                          <span className={`font-mono text-[10px] ${isCurrent ? "text-paper" : isDone ? "text-textDim" : "text-textDimmer"}`}>{step}</span>
+                          {isCurrent && <span className="ml-auto animate-pulse font-mono text-[8px]" style={{ color: agent.accent }}>●</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Log terminal */}
                 <div className="overflow-hidden rounded-2xl border border-[#1e2025] bg-[#080a0c]">
                   <div className="flex items-center justify-between border-b border-[#1e2025] px-4 py-2.5 bg-[#0d0f11]">
@@ -736,7 +833,10 @@ export default function AdminPage() {
                         <div className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
                         <div className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
                       </div>
-                      <span className="ml-2 font-mono text-[9px] text-textDimmer">{agent.name.toLowerCase()}.log — {myLogs.length} entries</span>
+                      <span className="ml-2 font-mono text-[9px] text-textDimmer">
+                        {agent.name.toLowerCase()}.log — {myLogs.length} entries
+                        {isRunning && <span className="ml-2 animate-pulse" style={{ color: agent.accent }}>● live</span>}
+                      </span>
                     </div>
                     <button onClick={loadAgents} className="font-mono text-[9px] text-textDimmer hover:text-paper transition-colors">↻</button>
                   </div>
@@ -746,7 +846,7 @@ export default function AdminPage() {
                         <div className="font-mono text-[10px] text-textDimmer">$ waiting for input…</div>
                         <div className="mt-1 font-mono text-[9px] text-textDimmer/40">run {agent.name.toLowerCase()} to populate logs</div>
                       </div>
-                    ) : myLogs.map((log) => (
+                    ) : [...myLogs].reverse().map((log) => (
                       <div key={log.id} className="flex items-start gap-2 rounded-lg px-3 py-2 hover:bg-white/[0.02]">
                         <span className="flex-none font-mono text-[9px] mt-0.5 w-4">
                           {log.type === "error" ? <span className="text-red-400">✗</span> : log.type === "success" ? <span className="text-ok">✓</span> : <span className="text-textDimmer">›</span>}
@@ -757,6 +857,7 @@ export default function AdminPage() {
                         <span className="flex-none font-mono text-[8px] text-textDimmer/50 whitespace-nowrap">{timeAgo(log.created_at)}</span>
                       </div>
                     ))}
+                    <div ref={detailTerminalEndRef} />
                   </div>
                 </div>
               </div>
@@ -770,6 +871,9 @@ export default function AdminPage() {
             { label: "Sent",    value: leads.filter(l => l.status === "email_sent").length,  colour: "#ff6a1f" },
             { label: "Replied", value: leads.filter(l => l.status === "replied").length,     colour: "#22c55e" },
           ];
+
+          // Current running agent latest log (for fleet view banner)
+          const currentRunningLog = runningAgent ? agentLogs.find(l => l.agent.toLowerCase() === runningAgent) : null;
 
           return (
             <div className="space-y-4">
@@ -788,6 +892,21 @@ export default function AdminPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Live banner — shows while any agent is running */}
+              {runningAgent && currentRunningLog && (
+                <div className="rounded-xl border border-ok/20 bg-ok/5 px-4 py-2.5 flex items-center gap-3">
+                  <span className="animate-pulse text-[8px] text-ok">●</span>
+                  <span className="font-mono text-[10px] text-ok/80 uppercase tracking-widest">{runningAgent.toUpperCase()}</span>
+                  <span className="font-mono text-[10px] text-textDim truncate">{currentRunningLog.message}</span>
+                </div>
+              )}
+              {runningAgent && !currentRunningLog && (
+                <div className="rounded-xl border border-ok/20 bg-ok/5 px-4 py-2.5 flex items-center gap-2">
+                  <span className="animate-pulse text-[8px] text-ok">●</span>
+                  <span className="font-mono text-[10px] text-ok/80">{runningAgent.toUpperCase()} starting…</span>
+                </div>
+              )}
 
               {agentResult && (
                 <div className="rounded-xl border border-ok/30 bg-ok/8 px-4 py-2.5 font-mono text-[11px] text-ok">
@@ -821,9 +940,9 @@ export default function AdminPage() {
               <div className="space-y-2">
                 <div className="font-mono text-[9px] uppercase tracking-widest text-textDimmer px-1">Agents — tap to inspect</div>
                 {AGENTS.map((agent) => {
-                  const isRunning = runningAgent === agent.id;
+                  const isRunning = runningAgent === agent.id || runningAgent === "pipeline";
                   const myLogs = agentLogs.filter(l => l.agent.toLowerCase() === agent.name.toLowerCase());
-                  const lastLog = myLogs[0];
+                  const latestLog = myLogs[0];
                   const errCount = myLogs.filter(l => l.type === "error").length;
                   const successCount = myLogs.filter(l => l.type === "success").length;
                   return (
@@ -835,7 +954,7 @@ export default function AdminPage() {
                       <div className="relative flex items-center gap-3 px-4 py-4">
                         {/* Icon */}
                         <div className="flex h-10 w-10 flex-none items-center justify-center rounded-xl text-[18px]"
-                          style={{ backgroundColor: `${agent.accent}15`, border: `1px solid ${agent.accent}30` }}>
+                          style={{ backgroundColor: `${agent.accent}15`, border: `1px solid ${isRunning ? agent.accent : `${agent.accent}30`}` }}>
                           <span style={{ color: agent.accent }}>{agent.icon}</span>
                         </div>
                         {/* Info */}
@@ -849,8 +968,14 @@ export default function AdminPage() {
                             {errCount > 0 && <span className="font-mono text-[8px] text-red-400">{errCount} err</span>}
                           </div>
                           <div className="font-mono text-[9px] text-textDimmer">{agent.role}</div>
+                          {/* Show live log when running, latest log otherwise */}
                           <div className="mt-0.5 truncate font-mono text-[10px] text-textDim">
-                            {lastLog ? `▸ ${lastLog.message}` : "No activity yet"}
+                            {isRunning && latestLog
+                              ? <span style={{ color: agent.accent }}>▸ {latestLog.message}</span>
+                              : latestLog
+                                ? `▸ ${latestLog.message}`
+                                : <span className="text-textDimmer">{agent.steps[0]}</span>
+                            }
                           </div>
                         </div>
                         {/* Right side */}
@@ -868,6 +993,24 @@ export default function AdminPage() {
                           <span className="font-mono text-[12px] text-textDimmer/40">›</span>
                         </div>
                       </div>
+                      {/* Steps preview on hover / running */}
+                      {isRunning && (
+                        <div className="border-t px-4 py-2.5 flex items-center gap-2 overflow-x-auto" style={{ borderColor: `${agent.accent}20` }}>
+                          {agent.steps.map((step, i) => {
+                            const currentStepIdx = latestLog ? guessStep(agent.id, latestLog.message) : 0;
+                            const done = i < currentStepIdx;
+                            const active = i === currentStepIdx;
+                            return (
+                              <div key={i} className="flex items-center gap-1.5 flex-none">
+                                <div className={`h-1.5 w-1.5 rounded-full flex-none transition-all ${active ? "animate-pulse" : ""}`}
+                                  style={{ backgroundColor: active ? agent.accent : done ? "#22c55e" : "#2a2d35" }} />
+                                <span className="font-mono text-[8px] whitespace-nowrap" style={{ color: active ? agent.accent : done ? "#22c55e90" : "#4a4d56" }}>{step}</span>
+                                {i < agent.steps.length - 1 && <span className="text-[8px] text-textDimmer/30 ml-0.5">›</span>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -883,8 +1026,8 @@ export default function AdminPage() {
                       <div className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <div className={`h-1.5 w-1.5 rounded-full ${agentLogs.length > 0 ? "bg-ok animate-pulse" : "bg-[#2a2d35]"}`} />
-                      <span className="font-mono text-[9px] text-textDimmer">live.log</span>
+                      <div className={`h-1.5 w-1.5 rounded-full transition-colors ${runningAgent ? "bg-ok animate-pulse" : agentLogs.length > 0 ? "bg-ok/50" : "bg-[#2a2d35]"}`} />
+                      <span className="font-mono text-[9px] text-textDimmer">live.log {runningAgent && <span className="text-ok">— streaming</span>}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -898,7 +1041,7 @@ export default function AdminPage() {
                     <div className="py-6 text-center text-textDimmer">$ initialising…</div>
                   ) : agentLogs.length === 0 ? (
                     <div className="py-6 text-center text-textDimmer">$ no output yet — run an agent</div>
-                  ) : agentLogs.map((log) => {
+                  ) : [...agentLogs].reverse().map((log) => {
                     const c = agentColours[log.agent] ?? "#6b7280";
                     return (
                       <div key={log.id} className="flex items-start gap-2 rounded px-2 py-1 hover:bg-white/[0.02]">
@@ -909,6 +1052,7 @@ export default function AdminPage() {
                       </div>
                     );
                   })}
+                  <div ref={terminalEndRef} />
                 </div>
               </div>
 
