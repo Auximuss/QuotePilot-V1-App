@@ -59,105 +59,114 @@ async function runScout(supabase: SupabaseClient) {
   ];
 
   const dayIndex = Math.floor(Date.now() / 86400000);
-  const city  = UK_CITIES[dayIndex % UK_CITIES.length];
-  const trade = TRADES[Math.floor(dayIndex / UK_CITIES.length) % TRADES.length];
-
-  await agentLog(supabase, "Scout", `🔍 Searching for ${trade}s in ${city}...`, "info");
-
   let totalFound = 0;
   let totalWithEmail = 0;
 
-  try {
-    const gptRes = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_tokens: 700,
-      response_format: { type: "json_object" },
-      messages: [{
-        role: "user",
-        content: `List 20 real, independent UK ${trade} businesses based in ${city} or nearby. Small local businesses (1–15 employees) only — no national chains. Return JSON: {"leads": [{"name": "Business Name", "domain": "domain.co.uk"}]}. Use .co.uk domains where possible.`,
-      }],
-    });
+  // Try up to 4 different city+trade combos until we hit 10 leads.
+  // This prevents the dedup wall when a city/trade has already been exhausted.
+  for (let attempt = 0; attempt < 4 && totalFound < 10; attempt++) {
+    const idx = dayIndex + attempt;
+    const city  = UK_CITIES[idx % UK_CITIES.length];
+    const trade = TRADES[Math.floor(idx / UK_CITIES.length) % TRADES.length];
 
-    const candidates: { name: string; domain: string }[] =
-      JSON.parse(gptRes.choices[0].message.content ?? "{}").leads ?? [];
+    if (attempt === 0) {
+      await agentLog(supabase, "Scout", `🔍 Searching for ${trade}s in ${city}…`, "info");
+    } else {
+      await agentLog(supabase, "Scout", `Only ${totalFound} leads so far — trying ${trade}s in ${city}…`, "info");
+    }
 
-    await agentLog(supabase, "Scout", `GPT suggested ${candidates.length} candidates in ${city}`, "info");
-
-    for (const candidate of candidates) {
-      if (totalFound >= 10) break;
-      if (!candidate.domain) continue;
-
-      const domain = candidate.domain
-        .replace(/^(https?:\/\/)?(www\.)?/, "")
-        .split("/")[0]
-        .toLowerCase();
-
-      if (!domain.includes(".")) continue;
-
-      // Dedup
-      const { data: existing } = await supabase
-        .from("outreach_leads").select("id")
-        .ilike("notes", `%${domain}%`)
-        .limit(1);
-      if (existing?.length) continue;
-
-      // Verify domain is live
-      let domainLive = false;
-      try {
-        const r = await fetch(`https://${domain}`, { method: "HEAD", signal: AbortSignal.timeout(5000) });
-        domainLive = r.status < 500;
-      } catch {
-        try {
-          const r2 = await fetch(`https://www.${domain}`, { method: "HEAD", signal: AbortSignal.timeout(5000) });
-          domainLive = r2.status < 500;
-        } catch {}
-      }
-      if (!domainLive) continue;
-
-      // Hunter.io email lookup
-      let email: string | null = null;
-      try {
-        const hr = await fetch(
-          `https://api.hunter.io/v2/domain-search?domain=${domain}&api_key=${HUNTER_API_KEY}&limit=5`,
-          { signal: AbortSignal.timeout(7000) }
-        );
-        if (hr.ok) {
-          const hd = await hr.json();
-          const emails: any[] = hd.data?.emails ?? [];
-          email = (
-            emails.find(e => /contact|info|hello|enquir|admin|quote|office/i.test(e.value))
-            ?? emails[0]
-          )?.value ?? null;
-        }
-      } catch {}
-
-      const { error } = await supabase.from("outreach_leads").insert({
-        business_name: candidate.name,
-        trade,
-        email,
-        location: city,
-        source: "scout",
-        status: email ? "new" : "no_email",
-        notes: `https://${domain}`,
+    try {
+      const gptRes = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_tokens: 900,
+        response_format: { type: "json_object" },
+        messages: [{
+          role: "user",
+          content: `List 25 real, independent UK ${trade} businesses based in ${city} or within 15 miles. Small local businesses (1–20 employees) only — absolutely no national chains or franchises. Return JSON: {"leads": [{"name": "Business Name", "domain": "domain.co.uk"}]}. Use .co.uk domains.`,
+        }],
       });
 
-      if (error) {
-        await agentLog(supabase, "Scout", `✗ DB: ${error.message}`, "error");
-        continue;
-      }
+      const candidates: { name: string; domain: string }[] =
+        JSON.parse(gptRes.choices[0].message.content ?? "{}").leads ?? [];
 
-      totalFound++;
-      if (email) {
-        totalWithEmail++;
-        await agentLog(supabase, "Scout", `✓ ${candidate.name} (${city}) — ${email}`, "success", { trade, city });
-      } else {
-        await agentLog(supabase, "Scout", `◎ ${candidate.name} (${city}) — no email`, "info");
-      }
+      await agentLog(supabase, "Scout", `GPT returned ${candidates.length} candidates for ${city}`, "info");
 
-      await new Promise(r => setTimeout(r, 400));
+      for (const candidate of candidates) {
+        if (totalFound >= 10) break;
+        if (!candidate.domain) continue;
+
+        const domain = candidate.domain
+          .replace(/^(https?:\/\/)?(www\.)?/, "")
+          .split("/")[0]
+          .toLowerCase();
+
+        if (!domain.includes(".")) continue;
+
+        // Dedup by domain
+        const { data: existing } = await supabase
+          .from("outreach_leads").select("id")
+          .ilike("notes", `%${domain}%`)
+          .limit(1);
+        if (existing?.length) continue;
+
+        // Verify domain is live
+        let domainLive = false;
+        try {
+          const r = await fetch(`https://${domain}`, { method: "HEAD", signal: AbortSignal.timeout(5000) });
+          domainLive = r.status < 500;
+        } catch {
+          try {
+            const r2 = await fetch(`https://www.${domain}`, { method: "HEAD", signal: AbortSignal.timeout(5000) });
+            domainLive = r2.status < 500;
+          } catch {}
+        }
+        if (!domainLive) continue;
+
+        // Hunter.io email lookup
+        let email: string | null = null;
+        try {
+          const hr = await fetch(
+            `https://api.hunter.io/v2/domain-search?domain=${domain}&api_key=${HUNTER_API_KEY}&limit=5`,
+            { signal: AbortSignal.timeout(7000) }
+          );
+          if (hr.ok) {
+            const hd = await hr.json();
+            const emails: any[] = hd.data?.emails ?? [];
+            email = (
+              emails.find(e => /contact|info|hello|enquir|admin|quote|office/i.test(e.value))
+              ?? emails[0]
+            )?.value ?? null;
+          }
+        } catch {}
+
+        const { error } = await supabase.from("outreach_leads").insert({
+          business_name: candidate.name,
+          trade,
+          email,
+          location: city,
+          source: "scout",
+          status: email ? "new" : "no_email",
+          notes: `https://${domain}`,
+        });
+
+        if (error) {
+          await agentLog(supabase, "Scout", `✗ DB: ${error.message}`, "error");
+          continue;
+        }
+
+        totalFound++;
+        if (email) {
+          totalWithEmail++;
+          await agentLog(supabase, "Scout", `✓ ${candidate.name} (${city}) — ${email}`, "success", { trade, city });
+        } else {
+          await agentLog(supabase, "Scout", `◎ ${candidate.name} (${city}) — no email found`, "info");
+        }
+
+        await new Promise(r => setTimeout(r, 300));
+      }
+    } catch (e: any) {
+      await agentLog(supabase, "Scout", `✗ Error on attempt ${attempt + 1}: ${e.message}`, "error");
     }
-  } catch (e: any) {
-    await agentLog(supabase, "Scout", `✗ Scout error: ${e.message}`, "error");
   }
 
   const summary = `Scout done — ${totalFound} new leads stored, ${totalWithEmail} with emails`;
