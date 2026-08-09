@@ -88,7 +88,15 @@ export default function NewQuotePage() {
 
     try {
       const formData = new FormData();
-      formData.append("audio", blob, "recording.webm");
+      // Use the correct extension so Whisper knows the actual codec
+      const ext = blob.type.includes("mp4") || blob.type.includes("m4a")
+        ? "mp4"
+        : blob.type.includes("ogg")
+        ? "ogg"
+        : blob.type.includes("wav")
+        ? "wav"
+        : "webm";
+      formData.append("audio", blob, `recording.${ext}`);
 
       const res = await fetch("/api/quotes/transcribe", { method: "POST", body: formData });
       if (!res.ok) {
