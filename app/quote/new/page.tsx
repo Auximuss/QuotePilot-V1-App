@@ -63,7 +63,7 @@ export default function NewQuotePage() {
         handleRecordingComplete(blob);
       };
 
-      recorder.start();
+      recorder.start(100); // collect chunks every 100ms so no audio is lost at the start
       mediaRecorderRef.current = recorder;
 
       setStage("recording");
