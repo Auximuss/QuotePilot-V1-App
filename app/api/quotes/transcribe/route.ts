@@ -49,6 +49,9 @@ export async function POST(request: NextRequest) {
     const transcription = await openai.audio.transcriptions.create({
       file: audioFile,
       model: "whisper-1",
+      language: "en",
+      prompt:
+        "UK tradesperson quoting a job. Vocabulary: tap, sink, tiles, bricks, plasterboard, skirting, coving, render, screed, joists, rafters, fascia, soffit, guttering, downpipe, radiator, boiler, thermostat, consumer unit, socket, light fitting, spotlights, labour, materials, supply and fit, remove and replace, square metres, linear metres, square feet.",
     });
 
     return NextResponse.json({ transcript: transcription.text });
