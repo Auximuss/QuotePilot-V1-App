@@ -11,10 +11,15 @@ export async function GET() {
   const supabase = createServiceClient();
 
   // All businesses (one per user)
-  const { data: businesses } = await supabase
+  const { data: businesses, error: bizError } = await supabase
     .from("businesses")
     .select("id, name, trade, owner_id, subscription_tier, subscription_status, created_at")
     .order("created_at", { ascending: false });
+
+  if (bizError) {
+    console.error("businesses query error:", bizError);
+    return NextResponse.json({ error: `DB error: ${bizError.message}` }, { status: 500 });
+  }
 
   const all = businesses ?? [];
 
