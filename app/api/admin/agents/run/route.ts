@@ -29,87 +29,94 @@ async function agentLog(supabase: SupabaseClient, agent: string, message: string
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────
-// Uses a verified seed list of real Nottingham tradespeople (found via live
-// search), then runs Hunter.io on each domain to find email addresses.
-// New businesses are added to the seed list over time.
+// GPT discovers 10 fresh UK trade leads daily, rotating city + trade.
+// Hunter.io validates each domain and finds a contact email.
 async function runScout(supabase: SupabaseClient) {
   const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
+  const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
   if (!HUNTER_API_KEY) {
-    await agentLog(supabase, "Scout", "✗ Missing HUNTER_API_KEY env var", "error");
-    return { message: "Missing Hunter API key" };
+    await agentLog(supabase, "Scout", "✗ Missing HUNTER_API_KEY", "error");
+    return { message: "Missing Hunter API key", totalFound: 0, totalWithEmail: 0 };
+  }
+  if (!OPENAI_API_KEY) {
+    await agentLog(supabase, "Scout", "✗ Missing OPENAI_API_KEY", "error");
+    return { message: "Missing OpenAI API key", totalFound: 0, totalWithEmail: 0 };
   }
 
-  // ── Verified Nottingham tradespeople (real businesses, confirmed live) ─────
-  const SEED_LEADS = [
-    // Plumbers
-    { name: "Plumbers Notts",              trade: "plumber",          website: "https://www.plumbers-notts.co.uk" },
-    { name: "BL Plumbers Nottingham",      trade: "plumber",          website: "https://blplumbersnottinghamltd.co.uk",  email: "blplumbers247@gmail.com" },
-    { name: "MB Plumbing & Heating",       trade: "plumber",          website: "https://mbplumbers.co.uk" },
-    { name: "DJA Plumbing and Heating",    trade: "plumber",          website: "https://djaplumbingandheating.co.uk" },
-    { name: "Near Plumber Beeston",        trade: "plumber",          website: "https://nearplumber.co.uk",             email: "info@nearplumber.co.uk" },
-    { name: "FWP Plumbers Nottingham",     trade: "plumber",          website: "https://www.fwpplumbersnottingham.co.uk" },
-    { name: "Ben Plumber",                 trade: "plumber",          website: "https://www.benplumberltd.co.uk" },
-    { name: "Andy the Plumber Stapleford", trade: "plumber",          website: "https://staplefordplumber.co.uk" },
-    // Electricians
-    { name: "RG Electrical Nottingham",    trade: "electrician",      website: "https://electrician-nottingham.co.uk" },
-    { name: "S O Campbell Electrical",     trade: "electrician",      website: "https://www.socampbellelectrical.co.uk", email: "info@socampbellelectrical.co.uk" },
-    { name: "ADC Electrical",              trade: "electrician",      website: "https://adcalltrade.co.uk" },
-    { name: "Arnold Electrical",           trade: "electrician",      website: "https://www.arnoldelectrical.com" },
-    { name: "Wing Electrical",             trade: "electrician",      website: "https://wingelectrical.co.uk" },
-    { name: "Dennis Electrical",           trade: "electrician",      website: "https://dennis-electrical.co.uk" },
-    { name: "MT Electrical",               trade: "electrician",      website: "https://mt-electrical.co.uk" },
-    { name: "Alpha Electricians",          trade: "electrician",      website: "https://www.nottingham-electrician.co.uk" },
-    // Builders
-    { name: "Building Nottingham",         trade: "builder",          website: "https://www.building-nottingham.co.uk" },
-    { name: "Nottingham Building & Roofing", trade: "builder",        website: "https://www.nottinghambuildingandroofing.co.uk" },
-    // Roofers
-    { name: "Nottingham Gutters & Roofing", trade: "roofer",          website: "https://www.nottinghamgutters.co.uk",   email: "info@nottinghamgutters.co.uk" },
-    { name: "JTB Roofers Nottingham",      trade: "roofer",           website: "https://www.roofersofnottingham.co.uk" },
-    { name: "B&S Roofing Nottingham",      trade: "roofer",           website: "https://bsroofingnottingham.co.uk" },
-    { name: "D&S Roofing Contractors",     trade: "roofer",           website: "https://dandsroofingcontractors.co.uk" },
-    // Plasterers
-    { name: "JB Plastering Nottingham",    trade: "plasterer",        website: "https://www.plasterernottinghamshire.co.uk" },
-    { name: "Marklands Plastering",        trade: "plasterer",        website: "https://www.marklandsplastering.co.uk" },
-    { name: "Quality Plastering Nottingham", trade: "plasterer",      website: "https://www.qualityplasteringnottingham.co.uk" },
-    { name: "ATK Plastering Ltd",          trade: "plasterer",        website: "https://www.atkplastering.co.uk" },
-    { name: "DF Plastering Nottingham",    trade: "plasterer",        website: "https://dfplasteringnottingham.com" },
-    { name: "RJ Bethell Plastering",       trade: "plasterer",        website: "https://www.nottinghamplasterer.co.uk" },
-    { name: "JSL Plastering",              trade: "plasterer",        website: "https://www.jslplastering.co.uk" },
-    { name: "AS Complete Plastering",      trade: "plasterer",        website: "https://www.ascompleteplastering.co.uk" },
-    // Carpenters & Joiners
-    { name: "Joiner Nottingham",           trade: "carpenter",        website: "https://www.joinernottingham.co.uk" },
-    { name: "S Kirk Joinery",              trade: "carpenter",        website: "https://www.skirkjoinery.co.uk" },
-    { name: "Trentside Joinery",           trade: "carpenter",        website: "https://trentsidejoinery.com" },
-    { name: "Redwood Joinery Ltd",         trade: "carpenter",        website: "https://www.redwood-joinery.co.uk" },
-    // Gas Engineers
-    { name: "Gaswise Nottingham",          trade: "gas engineer",     website: "https://www.gaswiseonline.co.uk" },
-    { name: "We Fix Boilers Nottingham",   trade: "gas engineer",     website: "https://www.wefixboilers.co.uk" },
-    { name: "Nottingham Gas Services",     trade: "gas engineer",     website: "https://www.nottinghamgasservices.co.uk" },
-    { name: "Nottingham Boiler Shop",      trade: "gas engineer",     website: "https://www.nottinghamboilershop.co.uk" },
-    { name: "Nottingham Boiler Solutions", trade: "gas engineer",     website: "https://nottinghamboilersolutions.co.uk" },
-    { name: "CCMK Gas Nottingham",         trade: "gas engineer",     website: "https://ccmkgas.co.uk" },
-    { name: "Nottingham Heating",          trade: "gas engineer",     website: "https://www.nottinghamheating.co.uk" },
-    { name: "RB Heating & Gas Services",   trade: "gas engineer",     website: "https://rbheatingandgas.co.uk" },
+  const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+
+  const UK_CITIES = [
+    "Nottingham", "Derby", "Leicester", "Sheffield", "Birmingham",
+    "Manchester", "Leeds", "Bristol", "Newcastle", "Liverpool",
+    "Coventry", "Norwich", "Southampton", "Brighton", "Cardiff",
+    "Glasgow", "Edinburgh", "Milton Keynes", "Reading", "Oxford",
+    "Cambridge", "Exeter", "Plymouth", "Stoke-on-Trent", "Hull",
   ];
+  const TRADES = [
+    "plumber", "electrician", "builder", "roofer", "plasterer",
+    "carpenter", "gas engineer", "tiler", "painter decorator", "landscaper",
+  ];
+
+  const dayIndex = Math.floor(Date.now() / 86400000);
+  const city  = UK_CITIES[dayIndex % UK_CITIES.length];
+  const trade = TRADES[Math.floor(dayIndex / UK_CITIES.length) % TRADES.length];
+
+  await agentLog(supabase, "Scout", `🔍 Searching for ${trade}s in ${city}...`, "info");
 
   let totalFound = 0;
   let totalWithEmail = 0;
 
-  await agentLog(supabase, "Scout", `🔍 Processing ${SEED_LEADS.length} verified Nottingham trade businesses...`, "info");
+  try {
+    const gptRes = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      max_tokens: 700,
+      response_format: { type: "json_object" },
+      messages: [{
+        role: "user",
+        content: `List 20 real, independent UK ${trade} businesses based in ${city} or nearby. Small local businesses (1–15 employees) only — no national chains. Return JSON: {"leads": [{"name": "Business Name", "domain": "domain.co.uk"}]}. Use .co.uk domains where possible.`,
+      }],
+    });
 
-  for (const lead of SEED_LEADS) {
-    // Dedup — skip if already stored
-    const { data: existing } = await supabase
-      .from("outreach_leads").select("id")
-      .ilike("notes", `%${lead.website}%`)
-      .limit(1);
-    if (existing?.length) continue;
+    const candidates: { name: string; domain: string }[] =
+      JSON.parse(gptRes.choices[0].message.content ?? "{}").leads ?? [];
 
-    // Use direct email if we already know it, otherwise try Hunter
-    let email = lead.email ?? null;
-    if (!email && lead.website) {
+    await agentLog(supabase, "Scout", `GPT suggested ${candidates.length} candidates in ${city}`, "info");
+
+    for (const candidate of candidates) {
+      if (totalFound >= 10) break;
+      if (!candidate.domain) continue;
+
+      const domain = candidate.domain
+        .replace(/^(https?:\/\/)?(www\.)?/, "")
+        .split("/")[0]
+        .toLowerCase();
+
+      if (!domain.includes(".")) continue;
+
+      // Dedup
+      const { data: existing } = await supabase
+        .from("outreach_leads").select("id")
+        .ilike("notes", `%${domain}%`)
+        .limit(1);
+      if (existing?.length) continue;
+
+      // Verify domain is live
+      let domainLive = false;
       try {
-        const domain = new URL(lead.website).hostname.replace(/^www\./, "");
+        const r = await fetch(`https://${domain}`, { method: "HEAD", signal: AbortSignal.timeout(5000) });
+        domainLive = r.status < 500;
+      } catch {
+        try {
+          const r2 = await fetch(`https://www.${domain}`, { method: "HEAD", signal: AbortSignal.timeout(5000) });
+          domainLive = r2.status < 500;
+        } catch {}
+      }
+      if (!domainLive) continue;
+
+      // Hunter.io email lookup
+      let email: string | null = null;
+      try {
         const hr = await fetch(
           `https://api.hunter.io/v2/domain-search?domain=${domain}&api_key=${HUNTER_API_KEY}&limit=5`,
           { signal: AbortSignal.timeout(7000) }
@@ -118,39 +125,42 @@ async function runScout(supabase: SupabaseClient) {
           const hd = await hr.json();
           const emails: any[] = hd.data?.emails ?? [];
           email = (
-            emails.find(e => /contact|info|hello|enquir|admin|quote|office/i.test(e.value)) ?? emails[0]
+            emails.find(e => /contact|info|hello|enquir|admin|quote|office/i.test(e.value))
+            ?? emails[0]
           )?.value ?? null;
         }
       } catch {}
+
+      const { error } = await supabase.from("outreach_leads").insert({
+        business_name: candidate.name,
+        trade,
+        email,
+        location: city,
+        source: "scout",
+        status: email ? "new" : "no_email",
+        notes: `https://${domain}`,
+      });
+
+      if (error) {
+        await agentLog(supabase, "Scout", `✗ DB: ${error.message}`, "error");
+        continue;
+      }
+
+      totalFound++;
+      if (email) {
+        totalWithEmail++;
+        await agentLog(supabase, "Scout", `✓ ${candidate.name} (${city}) — ${email}`, "success", { trade, city });
+      } else {
+        await agentLog(supabase, "Scout", `◎ ${candidate.name} (${city}) — no email`, "info");
+      }
+
+      await new Promise(r => setTimeout(r, 400));
     }
-
-    const { error } = await supabase.from("outreach_leads").insert({
-      business_name: lead.name,
-      trade: lead.trade,
-      email,
-      location: "Nottingham",
-      source: "scout",
-      status: email ? "new" : "no_email",
-      notes: lead.website,
-    });
-
-    if (error) {
-      await agentLog(supabase, "Scout", `✗ DB insert failed: ${error.message}`, "error");
-      continue;
-    }
-
-    totalFound++;
-    if (email) {
-      totalWithEmail++;
-      await agentLog(supabase, "Scout", `✓ ${lead.name} — ${email}`, "success", { trade: lead.trade });
-    } else {
-      await agentLog(supabase, "Scout", `◎ ${lead.name} — no email found`, "info");
-    }
-
-    await new Promise(r => setTimeout(r, 500));
+  } catch (e: any) {
+    await agentLog(supabase, "Scout", `✗ Scout error: ${e.message}`, "error");
   }
 
-  const summary = `Scout done — ${totalFound} leads stored, ${totalWithEmail} with emails ready for Writer`;
+  const summary = `Scout done — ${totalFound} new leads stored, ${totalWithEmail} with emails`;
   await agentLog(supabase, "Scout", summary, "success");
   return { message: summary, totalFound, totalWithEmail };
 }
