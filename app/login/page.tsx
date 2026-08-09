@@ -86,23 +86,15 @@ export default function AuthPage() {
     setLoading(true);
 
     try {
-      const SUPA_URL = "https://mppnrqtfcbapkohsogap.supabase.co";
-      const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wcG5ycXRmY2JhcGtvaHNvZ2FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNzkzMzYsImV4cCI6MjA5ODc1NTMzNn0.QG5fNZyOs03OOyQa03mb067Gg2lAg0EVPD4lDdYyKG0";
-      const res = await fetch(`${SUPA_URL}/auth/v1/signup`, {
+      const res = await fetch("/api/auth/signup", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: SUPA_KEY,
-          Authorization: `Bearer ${SUPA_KEY}`,
-        },
-        body: JSON.stringify({ email, password, data: { business_name: businessName, trade } }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, businessName, trade }),
       });
-      const text = await res.text();
-      let json: any = {};
-      try { json = JSON.parse(text); } catch { /* ignore parse error */ }
+      const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         setLoading(false);
-        setError(json.error_description || json.msg || json.error || "Signup failed. Please try again.");
+        setError(json.error || "Signup failed. Please try again.");
         return;
       }
     } catch (e: any) {
@@ -111,13 +103,24 @@ export default function AuthPage() {
       return;
     }
 
-    const { error: signInError } = await createClient().auth.signInWithPassword({ email, password });
-    if (signInError) {
+    // Sign in now that the account exists
+    const loginRes = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const loginData = await loginRes.json().catch(() => ({}));
+    if (!loginRes.ok) {
       setLoading(false);
       setError("Account created! Please log in.");
       setTab("login");
       return;
     }
+    const supabase = createClient();
+    await supabase.auth.setSession({
+      access_token: loginData.access_token,
+      refresh_token: loginData.refresh_token,
+    });
 
     setLoading(false);
     router.push("/home");
