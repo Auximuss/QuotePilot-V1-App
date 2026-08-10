@@ -11,7 +11,7 @@ type Stats = { totalUsers: number; activeSubscriptions: number; monthlyRevenue: 
 type ActivityEvent = { type: string; label: string; sub: string; at: string; quoteId: string };
 type WeekRow = { label: string; signups: number; quotes: number };
 type AgentLog = { id: string; agent: string; message: string; type: string; created_at: string };
-type Lead = { id: string; business_name: string; trade: string; email: string; location: string; phone: string; status: string; email_body?: string; email_subject?: string; email_sent_at?: string; created_at: string };
+type Lead = { id: string; business_name: string; trade: string; email: string; location: string; phone: string; status: string; email_body?: string; email_subject?: string; email_sent_at?: string; instagram_handle?: string; instagram_dm_sent_at?: string; created_at: string };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const PLAN_COLOURS: Record<string, string> = {
@@ -702,9 +702,14 @@ export default function AdminPage() {
               desc: "Emails you a full pipeline summary every morning — leads, emails sent, replies, signups, conversion rate.",
               steps: ["Count leads at each stage", "Calculate reply + conversion rates", "Email report to your inbox"],
             },
+            {
+              id: "instagram", name: "Instagram", role: "DM Outreach", accent: "#e1306c", glow: "rgba(225,48,108,0.12)", icon: "◎",
+              desc: "Searches Instagram for each lead's handle, then sends a personalised cold DM. Max 20/day with human-like gaps.",
+              steps: ["Find Instagram handles", "GPT writes personalised DM", "Send via instagrapi", "Log & wait 8–15 min", "Repeat up to 20×"],
+            },
           ] as const;
 
-          const agentColours: Record<string, string> = { Scout: "#60a5fa", Writer: "#c084fc", Sender: "#fb923c", Reporter: "#4ade80", Pipeline: "#4ade80" };
+          const agentColours: Record<string, string> = { Scout: "#60a5fa", Writer: "#c084fc", Sender: "#fb923c", Reporter: "#4ade80", Instagram: "#e1306c", Pipeline: "#4ade80" };
           const statusColours: Record<string, string> = { new: "#6b7280", no_email: "#374151", email_ready: "#60a5fa", email_sent: "#fb923c", replied: "#4ade80", signed_up: "#c084fc" };
           const statusLabels: Record<string, string> = { new: "New", no_email: "No Email", email_ready: "Ready", email_sent: "Sent", replied: "Replied", signed_up: "Signed Up" };
 
@@ -785,11 +790,18 @@ export default function AdminPage() {
                     {/* Action */}
                     <div className="flex items-center justify-between px-5 py-4">
                       <div className="font-mono text-[10px] max-w-[200px] leading-relaxed" style={{ color: "#3a3d46" }}>{agent.desc}</div>
-                      <button onClick={() => runAgent(agent.id)} disabled={runningAgent !== null}
-                        className="flex-none rounded-2xl px-6 py-3 font-barlow text-[14px] font-bold tracking-wide transition-all active:scale-95 disabled:opacity-25"
-                        style={{ background: isRunning ? `${agent.accent}15` : `linear-gradient(135deg, ${agent.accent}, ${agent.accent}cc)`, color: isRunning ? agent.accent : "#050508" }}>
-                        {isRunning ? "Running…" : "▶ Run Now"}
-                      </button>
+                      {agent.id === "instagram" ? (
+                        <div className="flex-none rounded-2xl px-6 py-3 font-mono text-[10px] uppercase tracking-widest text-center"
+                          style={{ color: agent.accent, background: `${agent.accent}10`, border: `1px solid ${agent.accent}25` }}>
+                          Runs via<br />GitHub Actions
+                        </div>
+                      ) : (
+                        <button onClick={() => runAgent(agent.id)} disabled={runningAgent !== null}
+                          className="flex-none rounded-2xl px-6 py-3 font-barlow text-[14px] font-bold tracking-wide transition-all active:scale-95 disabled:opacity-25"
+                          style={{ background: isRunning ? `${agent.accent}15` : `linear-gradient(135deg, ${agent.accent}, ${agent.accent}cc)`, color: isRunning ? agent.accent : "#050508" }}>
+                          {isRunning ? "Running…" : "▶ Run Now"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1000,14 +1012,21 @@ export default function AdminPage() {
                           </div>
 
                           {/* run button */}
-                          <button onClick={e => { e.stopPropagation(); runAgent(agent.id); }} disabled={runningAgent !== null}
-                            className="w-full rounded-2xl py-2.5 font-barlow text-[13px] font-black tracking-wide transition-all disabled:opacity-20 active:scale-95"
-                            style={{
-                              background: isRunning ? `${agent.accent}18` : `linear-gradient(135deg, ${agent.accent}, ${agent.accent}bb)`,
-                              color: isRunning ? agent.accent : "#060508",
-                            }}>
-                            {isRunning ? "···" : "Run ▶"}
-                          </button>
+                          {agent.id === "instagram" ? (
+                            <div className="w-full rounded-2xl py-2.5 font-mono text-[9px] text-center tracking-widest uppercase"
+                              style={{ color: agent.accent, background: `${agent.accent}10`, border: `1px solid ${agent.accent}25` }}>
+                              Auto · 9am daily
+                            </div>
+                          ) : (
+                            <button onClick={e => { e.stopPropagation(); runAgent(agent.id); }} disabled={runningAgent !== null}
+                              className="w-full rounded-2xl py-2.5 font-barlow text-[13px] font-black tracking-wide transition-all disabled:opacity-20 active:scale-95"
+                              style={{
+                                background: isRunning ? `${agent.accent}18` : `linear-gradient(135deg, ${agent.accent}, ${agent.accent}bb)`,
+                                color: isRunning ? agent.accent : "#060508",
+                              }}>
+                              {isRunning ? "···" : "Run ▶"}
+                            </button>
+                          )}
                         </div>
 
                         {/* step progress bar along bottom */}
@@ -1100,6 +1119,12 @@ export default function AdminPage() {
                             <div className="font-mono text-[11px] font-semibold truncate" style={{ color: "#b0b2be" }}>{lead.business_name || lead.email || "—"}</div>
                             <div className="font-mono text-[8.5px] truncate mt-0.5" style={{ color: "#2a2d35" }}>{[lead.trade, lead.location, lead.email].filter(Boolean).join("  ·  ")}</div>
                           </div>
+                          {lead.instagram_handle && lead.instagram_handle !== "not_found" && (
+                            <span className="flex-none rounded-full px-2 py-0.5 font-mono text-[7.5px]"
+                              style={{ color: lead.instagram_dm_sent_at ? "#e1306c" : "#6b3050", background: "#e1306c0e", border: "1px solid #e1306c20" }}>
+                              {lead.instagram_dm_sent_at ? "✓ IG" : "@" + lead.instagram_handle.slice(0, 10)}
+                            </span>
+                          )}
                           <span className="flex-none rounded-full px-2.5 py-0.5 font-mono text-[7.5px] uppercase tracking-wider" style={{ color: sc, background: `${sc}10`, border: `1px solid ${sc}22` }}>{sl}</span>
                           <button onClick={e => { e.stopPropagation(); deleteLead(lead.id); }} className="flex-none h-6 w-6 flex items-center justify-center rounded-lg font-mono text-[11px] transition-colors" style={{ color: "#252830" }} onMouseEnter={e => (e.currentTarget.style.color = "#f87171")} onMouseLeave={e => (e.currentTarget.style.color = "#252830")}>✕</button>
                         </div>
