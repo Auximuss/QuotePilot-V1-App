@@ -261,13 +261,19 @@ async function runSender(supabase: SupabaseClient) {
 
 // ── Reporter ──────────────────────────────────────────────────────────────────
 async function runReporter(supabase: SupabaseClient) {
-  const { data: leads } = await supabase.from("outreach_leads").select("status");
+  const { data: leads } = await supabase.from("outreach_leads").select("status, instagram_handle, instagram_dm_sent_at");
   const total = leads?.length ?? 0;
   const byStatus = (s: string) => leads?.filter(l => l.status === s).length ?? 0;
 
+  const igHandles = leads?.filter(l => l.instagram_handle && l.instagram_handle !== "not_found").length ?? 0;
+  const igDmsSent = leads?.filter(l => l.instagram_dm_sent_at).length ?? 0;
+  const igPending = igHandles - igDmsSent;
+
   const report = [
-    `Demand Pilot — Daily Outreach Report`,
+    `📊 Demand Pilot — Outreach Report (${new Date().toLocaleDateString("en-GB")})`,
     `━━━━━━━━━━━━━━━━━━━━━━━━`,
+    ``,
+    `── EMAIL PIPELINE ──`,
     `Total leads:    ${total}`,
     `No email:       ${byStatus("no_email")}`,
     `New (pending):  ${byStatus("new")}`,
@@ -278,6 +284,11 @@ async function runReporter(supabase: SupabaseClient) {
     ``,
     `Conversion: ${total ? Math.round((byStatus("signed_up") / total) * 100) : 0}%`,
     `Reply rate: ${byStatus("email_sent") ? Math.round((byStatus("replied") / byStatus("email_sent")) * 100) : 0}%`,
+    ``,
+    `── INSTAGRAM OUTREACH ──`,
+    `Handles found:  ${igHandles}`,
+    `DMs sent:       ${igDmsSent}`,
+    `DMs pending:    ${igPending}`,
   ].join("\n");
 
   await sendEmail({

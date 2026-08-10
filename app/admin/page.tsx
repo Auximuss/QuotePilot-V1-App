@@ -790,12 +790,20 @@ export default function AdminPage() {
                     {/* Action */}
                     <div className="flex items-center justify-between px-5 py-4">
                       <div className="font-mono text-[10px] max-w-[200px] leading-relaxed" style={{ color: "#3a3d46" }}>{agent.desc}</div>
-                      {agent.id === "instagram" ? (
-                        <div className="flex-none rounded-2xl px-6 py-3 font-mono text-[10px] uppercase tracking-widest text-center"
-                          style={{ color: agent.accent, background: `${agent.accent}10`, border: `1px solid ${agent.accent}25` }}>
-                          Runs via<br />GitHub Actions
-                        </div>
-                      ) : (
+                      {agent.id === "instagram" ? (<>
+                        <button
+                          onClick={() => {
+                            const cmd = `python "C:\\Users\\Alexp\\OneDrive\\Pictures\\Desktop\\New folder (3)\\app\\scripts\\instagram_agent.py"`;
+                            window.prompt("Copy this command and paste into PowerShell:", cmd);
+                          }}
+                          className="flex-none rounded-2xl px-6 py-3 font-barlow text-[14px] font-bold tracking-wide transition-all active:scale-95"
+                          style={{ background: `linear-gradient(135deg, #e1306c, #e1306ccc)`, color: "#050508" }}>
+                          ▶ Copy Run Command
+                        </button>
+                        {agentResult && (
+                          <div className="flex-none rounded-xl px-4 py-2 font-mono text-[10px]" style={{ color: "#4ade80", background: "#060d07", border: "1px solid #4ade8020" }}>{agentResult}</div>
+                        )}
+                        </> ) : (
                         <button onClick={() => runAgent(agent.id)} disabled={runningAgent !== null}
                           className="flex-none rounded-2xl px-6 py-3 font-barlow text-[14px] font-bold tracking-wide transition-all active:scale-95 disabled:opacity-25"
                           style={{ background: isRunning ? `${agent.accent}15` : `linear-gradient(135deg, ${agent.accent}, ${agent.accent}cc)`, color: isRunning ? agent.accent : "#050508" }}>
@@ -952,11 +960,11 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* ── AGENT TILES  2×2 grid ────────────────────────────────────── */}
+              {/* ── AGENT TILES  2×2 grid (email agents) ───────────────────── */}
               <div>
-                <div className="font-mono text-[8px] uppercase tracking-[0.25em] mb-3" style={{ color: "#252a30" }}>Agents · tap to inspect</div>
+                <div className="font-mono text-[8px] uppercase tracking-[0.25em] mb-3" style={{ color: "#252a30" }}>Email Agents · tap to inspect</div>
                 <div className="grid grid-cols-2 gap-3">
-                  {AGENTS.map(agent => {
+                  {AGENTS.filter(a => a.id !== "instagram").map(agent => {
                     const isRunning = runningAgent === agent.id || runningAgent === "pipeline";
                     const myLogs = agentLogs.filter(l => l.agent.toLowerCase() === agent.name.toLowerCase());
                     const latestLog = myLogs[0];
@@ -1043,6 +1051,67 @@ export default function AdminPage() {
                   })}
                 </div>
               </div>
+
+              {/* ── INSTAGRAM AGENT (full-width below email grid) ───────────── */}
+              {(() => {
+                const agent = AGENTS.find(a => a.id === "instagram")!;
+                const myLogs = agentLogs.filter(l => l.agent.toLowerCase() === "instagram");
+                const successCount = myLogs.filter(l => l.type === "success").length;
+                const errCount = myLogs.filter(l => l.type === "error").length;
+                const latestLog = myLogs[0];
+                const igHandles = leads.filter(l => l.instagram_handle && l.instagram_handle !== "not_found").length;
+                const igDmsSent = leads.filter(l => l.instagram_dm_sent_at).length;
+                return (
+                  <div>
+                    <div className="font-mono text-[8px] uppercase tracking-[0.25em] mb-3" style={{ color: "#252a30" }}>Instagram · tap to inspect</div>
+                    <div className="relative overflow-hidden rounded-3xl cursor-pointer transition-all duration-200 active:scale-[0.99]"
+                      onClick={() => setSelectedAgent("instagram")}
+                      style={{ border: "1px solid #e1306c25", background: "linear-gradient(135deg, #0f0810, #09090c)" }}>
+                      <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, #e1306c50, transparent)" }} />
+                      <div className="relative flex items-center gap-5 px-5 py-5">
+                        {/* Icon */}
+                        <div className="flex h-14 w-14 flex-none items-center justify-center rounded-2xl text-[26px]"
+                          style={{ background: "linear-gradient(145deg, #e1306c22, #e1306c0a)", border: "1px solid #e1306c25" }}>
+                          <span style={{ color: "#e1306c" }}>◎</span>
+                        </div>
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2.5 mb-0.5">
+                            <span className="font-barlow text-[17px] font-bold tracking-tight">Instagram</span>
+                            <span className="font-mono text-[8px] uppercase tracking-[0.15em]" style={{ color: "#e1306c" }}>DM Outreach</span>
+                          </div>
+                          <div className="font-mono text-[9px] truncate" style={{ color: latestLog ? "#4a4d56" : "#252830" }}>
+                            {latestLog ? `▸ ${latestLog.message}` : "Runs via GitHub Actions · 9am weekdays"}
+                          </div>
+                        </div>
+                        {/* Stats */}
+                        <div className="flex flex-none items-center gap-5">
+                          <div className="text-center">
+                            <div className="font-barlow text-[22px] font-black leading-none" style={{ color: "#e1306c" }}>{igHandles}</div>
+                            <div className="font-mono text-[7px] uppercase tracking-widest mt-0.5" style={{ color: "#2a2d35" }}>handles</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-barlow text-[22px] font-black leading-none" style={{ color: "#e1306c" }}>{igDmsSent}</div>
+                            <div className="font-mono text-[7px] uppercase tracking-widest mt-0.5" style={{ color: "#2a2d35" }}>DMs sent</div>
+                          </div>
+                          {errCount > 0 && (
+                            <div className="text-center">
+                              <div className="font-barlow text-[22px] font-black leading-none" style={{ color: "#f87171" }}>{errCount}</div>
+                              <div className="font-mono text-[7px] uppercase tracking-widest mt-0.5" style={{ color: "#2a2d35" }}>errors</div>
+                            </div>
+                          )}
+                          <button
+                            onClick={e => { e.stopPropagation(); setSelectedAgent("instagram"); }}
+                            className="rounded-2xl px-4 py-2 font-mono text-[9px] uppercase tracking-widest transition-all active:scale-95"
+                            style={{ color: "#e1306c", background: "#e1306c15", border: "1px solid #e1306c40" }}>
+                            ▶ Run
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* ── LIVE FEED ─────────────────────────────────────────────────── */}
               <div>

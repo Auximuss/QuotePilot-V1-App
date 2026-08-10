@@ -14,6 +14,8 @@ import os
 import sys
 import time
 import random
+import json
+from pathlib import Path
 from datetime import datetime, timezone
 
 from instagrapi import Client
@@ -58,27 +60,17 @@ def log(supabase: SupabaseClient, message: str, type: str = "info") -> None:
 
 
 # ── Instagram login ────────────────────────────────────────────────────────────
+SESSION_FILE = Path(__file__).parent / "instagram_session.json"
+
 def instagram_login() -> Client:
     cl = Client()
     cl.delay_range = [1, 3]  # random delay between API calls
 
-    try:
-        if INSTAGRAM_TOTP_SECRET:
-            cl.login(
-                INSTAGRAM_USERNAME,
-                INSTAGRAM_PASSWORD,
-                verification_code=cl.totp_generate_code(INSTAGRAM_TOTP_SECRET),
-            )
-        else:
-            cl.login(INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD)
-    except TwoFactorRequired:
-        print(
-            "[ERROR] Instagram requires 2FA. Set INSTAGRAM_TOTP_SECRET in GitHub Secrets.",
-            flush=True,
-        )
-        sys.exit(1)
-    except Exception as e:
-        print(f"[ERROR] Instagram login failed: {e}", flush=True)
+    if SESSION_FILE.exists():
+        cl.load_settings(str(SESSION_FILE))
+        print("[INFO] Loaded saved session", flush=True)
+    else:
+        print("[ERROR] No session file found. Run login_by_cookie.py first.", flush=True)
         sys.exit(1)
 
     return cl
@@ -92,7 +84,7 @@ def find_instagram_handle(cl: Client, business_name: str, location: str) -> str 
     """
     query = f"{business_name} {location or ''}".strip()
     try:
-        results = cl.search_users(query, count=5)
+        results = cl.search_users(query)[:5]
     except ClientError:
         return None
 
@@ -194,7 +186,7 @@ def main() -> None:
     to_dm = (
         supabase.table("outreach_leads")
         .select("*")
-        .not_("instagram_handle", "is", None)
+        .filter("instagram_handle", "not.is", "null")
         .neq("instagram_handle", "not_found")
         .is_("instagram_dm_sent_at", "null")
         .limit(MAX_DMS_PER_RUN)
@@ -211,7 +203,21 @@ def main() -> None:
 
         try:
             dm_text = generate_dm(openai, lead)
-            user_id = cl.user_id_from_username(handle)
+            # Lookup user_id via private v1 API (avoids web-profile 429s)
+            user_id = None
+            for attempt in range(3):
+                try:
+                    user_id = cl.user_info_by_username_v1(handle).pk
+                    break
+                except Exception as e:
+                    if attempt < 2:
+                        wait = 30 * (attempt + 1)
+                        log(supabase, f"⏳ Rate limited — waiting {wait}s before retry…")
+                        time.sleep(wait)
+                    else:
+                        raise
+            if user_id is None:
+                raise Exception("Could not resolve user_id after retries")
             cl.direct_send(dm_text, [user_id])
 
             supabase.table("outreach_leads").update({

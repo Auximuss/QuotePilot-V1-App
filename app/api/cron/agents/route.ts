@@ -248,13 +248,19 @@ Return ONLY the email body, nothing else.`
     }
 
     // ── Reporter: daily summary ───────────────────────────────────────────────
-    const { data: allLeads } = await supabase.from("outreach_leads").select("status");
+    const { data: allLeads } = await supabase.from("outreach_leads").select("status, instagram_handle, instagram_dm_sent_at");
     const total = allLeads?.length ?? 0;
     const byStatus = (s: string) => allLeads?.filter(l => l.status === s).length ?? 0;
+
+    const igHandles  = allLeads?.filter(l => l.instagram_handle && l.instagram_handle !== "not_found").length ?? 0;
+    const igDmsSent  = allLeads?.filter(l => l.instagram_dm_sent_at).length ?? 0;
+    const igPending  = igHandles - igDmsSent;
 
     const report = [
       `📊 Demand Pilot — Daily Outreach Report (${new Date().toLocaleDateString("en-GB")})`,
       `━━━━━━━━━━━━━━━━━━━━━━━━`,
+      ``,
+      `── EMAIL PIPELINE ──`,
       `Total leads:    ${total}`,
       `New (pending):  ${byStatus("new")}`,
       `Email ready:    ${byStatus("email_ready")}`,
@@ -265,7 +271,13 @@ Return ONLY the email body, nothing else.`
       `Conversion rate: ${total ? Math.round((byStatus("signed_up") / total) * 100) : 0}%`,
       `Reply rate:      ${byStatus("email_sent") ? Math.round((byStatus("replied") / byStatus("email_sent")) * 100) : 0}%`,
       ``,
+      `── INSTAGRAM OUTREACH ──`,
+      `Handles found:  ${igHandles}`,
+      `DMs sent:       ${igDmsSent}`,
+      `DMs pending:    ${igPending}`,
+      ``,
       `Tonight's run: Scout found ${totalFound} leads (${totalWithEmail} with emails), Writer processed ${writerCount}, Sender delivered ${senderCount}.`,
+      `Instagram DMs run separately via GitHub Actions at 9am weekdays.`,
     ].join("\n");
 
     await sendEmail({
