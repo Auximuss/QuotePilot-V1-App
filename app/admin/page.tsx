@@ -754,8 +754,124 @@ export default function AdminPage() {
             return 0;
           }
 
-          // ── Detail view ────────────────────────────────────────────────────────
-          if (selectedAgent) {
+          // ── Emails hub view ────────────────────────────────────────────────────
+          if (selectedAgent === "emails") {
+            const emailAgents = AGENTS.filter(a => a.id !== "instagram");
+            const emailLogs = agentLogs.filter(l => ["scout","writer","sender","reporter"].includes(l.agent.toLowerCase()));
+            return (
+              <div className="space-y-4 pb-6">
+                <button onClick={() => setSelectedAgent(null)} className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-widest" style={{ color: "#3a3d46" }}>
+                  ← <span style={{ color: "#fb923c" }}>Email Pipeline</span>
+                </button>
+
+                {/* Header */}
+                <div className="relative overflow-hidden rounded-3xl px-6 py-5" style={{ background: "linear-gradient(145deg, #0d0a06, #09090c)", border: "1px solid #fb923c18" }}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-mono text-[8px] uppercase tracking-[0.3em] mb-1" style={{ color: "#2a2d35" }}>4-STAGE · EMAIL PIPELINE</div>
+                      <div className="font-barlow text-[32px] font-black tracking-tighter leading-none">Email Agents</div>
+                      {runningAgent && runningAgent !== "instagram" && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80] animate-pulse" />
+                          <span className="font-mono text-[10px]" style={{ color: "#4ade80" }}>{runningAgent.toUpperCase()} · running</span>
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={() => runAgent("pipeline")} disabled={runningAgent !== null}
+                      className="rounded-2xl px-5 py-3 font-barlow text-[13px] font-black tracking-wide transition-all active:scale-95 disabled:opacity-40"
+                      style={{ background: runningAgent ? "transparent" : "linear-gradient(135deg, #fb923c, #fb923cbb)", color: runningAgent ? "#fb923c" : "#050508", border: runningAgent ? "1px solid #fb923c30" : "none" }}>
+                      {runningAgent && runningAgent !== "instagram" ? "Running…" : "▶ Run All"}
+                    </button>
+                  </div>
+                  {/* Pipeline flow */}
+                  <div className="flex items-center mt-5 gap-0">
+                    {emailAgents.map((a, i) => {
+                      const running = runningAgent === a.id || runningAgent === "pipeline";
+                      const myLogs = agentLogs.filter(l => l.agent.toLowerCase() === a.name.toLowerCase());
+                      const done = myLogs.filter(l => l.type === "success").length > 0 && !running;
+                      return (
+                        <div key={a.id} className="flex items-center flex-1">
+                          <div className="flex-1 flex flex-col items-center gap-1 cursor-pointer" onClick={() => setSelectedAgent(a.id)}>
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full font-mono text-[14px] transition-all"
+                              style={{ background: running ? a.accent : done ? "#4ade80" : "#131518", border: `1px solid ${running ? a.accent : done ? "#4ade80" : "#252830"}`, boxShadow: running ? `0 0 16px ${a.accent}60` : "none" }}>
+                              <span style={{ color: running ? "#050508" : done ? "#050508" : a.accent }}>{done ? "✓" : a.icon}</span>
+                            </div>
+                            <div className="font-mono text-[8px]" style={{ color: running ? a.accent : "#2a2d35" }}>{a.name}</div>
+                          </div>
+                          {i < emailAgents.length - 1 && <div className="h-px w-6 flex-none" style={{ background: "#1e2025" }} />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Agent rows */}
+                {emailAgents.map(agent => {
+                  const isRunning = runningAgent === agent.id || runningAgent === "pipeline";
+                  const myLogs = agentLogs.filter(l => l.agent.toLowerCase() === agent.name.toLowerCase());
+                  const successCount = myLogs.filter(l => l.type === "success").length;
+                  const errorCount = myLogs.filter(l => l.type === "error").length;
+                  const recentLogs = [...myLogs].reverse().slice(-4);
+                  return (
+                    <div key={agent.id} className="rounded-3xl overflow-hidden" style={{ background: "#09090c", border: `1px solid ${isRunning ? `${agent.accent}35` : `${agent.accent}15`}`, boxShadow: isRunning ? `0 0 30px ${agent.accent}15` : "none" }}>
+                      {/* Agent header */}
+                      <div className="flex items-center gap-3 px-4 py-4 cursor-pointer" onClick={() => setSelectedAgent(agent.id)} style={{ borderBottom: `1px solid ${agent.accent}10` }}>
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl text-[18px] flex-none"
+                          style={{ background: `${agent.accent}15`, border: `1px solid ${agent.accent}20` }}>
+                          <span style={{ color: agent.accent }}>{agent.icon}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-barlow text-[15px] font-bold">{agent.name}</span>
+                            <span className="font-mono text-[8px] uppercase tracking-widest" style={{ color: agent.accent }}>{agent.role}</span>
+                            {isRunning && <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: "#4ade80" }} />}
+                          </div>
+                          <div className="font-mono text-[9px] mt-0.5" style={{ color: "#2a2d35" }}>{agent.desc.slice(0, 55)}…</div>
+                        </div>
+                        <div className="flex items-center gap-3 flex-none">
+                          <div className="text-center">
+                            <div className="font-barlow text-[18px] font-black" style={{ color: agent.accent }}>{successCount}</div>
+                            <div className="font-mono text-[7px]" style={{ color: "#252830" }}>ok</div>
+                          </div>
+                          {errorCount > 0 && <div className="text-center">
+                            <div className="font-barlow text-[18px] font-black" style={{ color: "#f87171" }}>{errorCount}</div>
+                            <div className="font-mono text-[7px]" style={{ color: "#252830" }}>err</div>
+                          </div>}
+                          <button onClick={e => { e.stopPropagation(); runAgent(agent.id); }} disabled={runningAgent !== null}
+                            className="rounded-xl px-3 py-1.5 font-barlow text-[12px] font-black transition-all active:scale-95 disabled:opacity-25"
+                            style={{ background: isRunning ? `${agent.accent}15` : `${agent.accent}22`, color: agent.accent, border: `1px solid ${agent.accent}30` }}>
+                            {isRunning ? "···" : "Run"}
+                          </button>
+                        </div>
+                      </div>
+                      {/* Inline log preview */}
+                      <div className="px-4 py-3 space-y-1">
+                        {recentLogs.length === 0 ? (
+                          <div className="font-mono text-[9px]" style={{ color: "#1e2025" }}>$ no logs yet — run this agent to see output</div>
+                        ) : recentLogs.map(log => (
+                          <div key={log.id} className="flex items-baseline gap-2">
+                            <span className="flex-none font-mono text-[9px]">
+                              {log.type === "error" ? <span style={{ color: "#f87171" }}>✗</span> : log.type === "success" ? <span style={{ color: "#4ade80" }}>✓</span> : <span style={{ color: "#252830" }}>·</span>}
+                            </span>
+                            <span className="flex-1 font-mono text-[9.5px] leading-relaxed" style={{ color: log.type === "error" ? "#f87171" : log.type === "success" ? "#4ade80" : "#4a4d56" }}>{log.message}</span>
+                            <span className="flex-none font-mono text-[8px]" style={{ color: "#1e2025" }}>{timeAgo(log.created_at)}</span>
+                          </div>
+                        ))}
+                        <div className="pt-1">
+                          <button onClick={() => setSelectedAgent(agent.id)} className="font-mono text-[8px] uppercase tracking-widest" style={{ color: agent.accent }}>
+                            See full logs →
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          }
+
+          // ── Individual agent detail view ────────────────────────────────────────
+          if (selectedAgent && selectedAgent !== "emails") {
             const agent = AGENTS.find(a => a.id === selectedAgent)!;
             const isRunning = runningAgent === agent.id || runningAgent === "pipeline";
             const myLogs = agentLogs.filter(l => l.agent.toLowerCase() === agent.name.toLowerCase());
@@ -767,8 +883,8 @@ export default function AdminPage() {
             return (
               <div className="space-y-3 pb-6">
                 {/* Back */}
-                <button onClick={() => setSelectedAgent(null)} className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-widest" style={{ color: "#3a3d46" }}>
-                  ← <span style={{ color: agent.accent }}>{agent.name}</span>
+                <button onClick={() => setSelectedAgent(agent.id === "instagram" ? null : "emails")} className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-widest" style={{ color: "#3a3d46" }}>
+                  ← <span style={{ color: agent.accent }}>{agent.id === "instagram" ? "Instagram" : "Email Pipeline"}</span>
                 </button>
 
                 {/* Splash card — full color top half */}
@@ -1042,53 +1158,62 @@ export default function AdminPage() {
 
                 {/* ── Emails column ─────────────────────────────────────────────── */}
                 <div>
-                  <div className="font-mono text-[8px] uppercase tracking-[0.25em] mb-3" style={{ color: "#252a30" }}>Emails</div>
-                  <div className="space-y-2.5">
-                    {AGENTS.filter(a => a.id !== "instagram").map(agent => {
-                      const isRunning = runningAgent === agent.id || runningAgent === "pipeline";
-                      const myLogs = agentLogs.filter(l => l.agent.toLowerCase() === agent.name.toLowerCase());
-                      const latestLog = myLogs[0];
-                      const errCount = myLogs.filter(l => l.type === "error").length;
-                      const successCount = myLogs.filter(l => l.type === "success").length;
-                      return (
-                        <div key={agent.id} onClick={() => setSelectedAgent(agent.id)}
-                          className="relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-200 active:scale-[0.97]"
-                          style={{
-                            border: `1px solid ${isRunning ? `${agent.accent}45` : `${agent.accent}18`}`,
-                            background: "#09090c",
-                            boxShadow: isRunning ? `0 0 30px ${agent.accent}18` : "none",
-                          }}>
-                          {isRunning && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: `linear-gradient(90deg, transparent, ${agent.accent}, transparent)` }} />}
-                          <div className="flex items-center gap-3 px-4 py-3.5">
-                            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-xl text-[20px]"
-                              style={{ background: `${agent.accent}15`, border: `1px solid ${agent.accent}20` }}>
-                              <span style={{ color: agent.accent, filter: isRunning ? `drop-shadow(0 0 8px ${agent.accent}90)` : "none" }}>{agent.icon}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-barlow text-[14px] font-bold tracking-tight">{agent.name}</div>
-                              <div className="font-mono text-[8.5px] truncate" style={{ color: isRunning && latestLog ? agent.accent : latestLog ? "#3a3d46" : "#252830" }}>
-                                {isRunning && latestLog ? latestLog.message.slice(0, 40) : latestLog ? latestLog.message.slice(0, 40) : agent.role}
+                  <div className="font-mono text-[8px] uppercase tracking-[0.25em] mb-3" style={{ color: "#fb923c50" }}>Emails</div>
+                  {(() => {
+                    const emailLogs = agentLogs.filter(l => ["scout","writer","sender","reporter"].includes(l.agent.toLowerCase()));
+                    const latestEmailLog = emailLogs[0];
+                    const anyRunning = runningAgent === "pipeline" || ["scout","writer","sender","reporter"].includes(runningAgent ?? "");
+                    const totalSuccess = emailLogs.filter(l => l.type === "success").length;
+                    return (
+                      <div className="relative overflow-hidden rounded-3xl cursor-pointer transition-all duration-200 active:scale-[0.98]"
+                        onClick={() => setSelectedAgent("emails")}
+                        style={{ border: `1px solid ${anyRunning ? "#fb923c45" : "#fb923c22"}`, background: "linear-gradient(160deg, #100a05, #09090c)", boxShadow: anyRunning ? "0 0 50px #fb923c18" : "none" }}>
+                        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, #fb923c40, transparent)" }} />
+                        {anyRunning && <div className="absolute inset-0 pointer-events-none animate-pulse" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 30%, rgba(251,146,60,0.07), transparent)" }} />}
+                        {/* Top splash */}
+                        <div className="relative flex flex-col items-center justify-center pt-8 pb-6" style={{ background: "linear-gradient(180deg, rgba(96,165,250,0.07) 0%, rgba(192,132,252,0.06) 33%, rgba(251,146,60,0.1) 66%, rgba(74,222,128,0.06) 100%)", borderBottom: "1px solid #fb923c12" }}>
+                          <div className="flex items-center gap-2 mb-3">
+                            {([{icon:"⬡",c:"#60a5fa"},{icon:"✦",c:"#c084fc"},{icon:"➤",c:"#fb923c"},{icon:"◈",c:"#4ade80"}] as const).map((a,i) => (
+                              <div key={i} className="flex items-center gap-1.5">
+                                <span style={{ color: a.c, fontSize: "18px" }}>{a.icon}</span>
+                                {i < 3 && <span style={{ color: "#1e2025", fontSize: "12px" }}>›</span>}
                               </div>
-                            </div>
-                            <div className="flex flex-none items-center gap-2.5" onClick={e => e.stopPropagation()}>
-                              <span className="font-barlow text-[18px] font-black leading-none" style={{ color: isRunning ? "#4ade80" : agent.accent }}>
-                                {isRunning ? <span className="inline-block h-2 w-2 rounded-full bg-[#4ade80] animate-pulse" /> : successCount}
-                              </span>
-                              <button onClick={e => { e.stopPropagation(); runAgent(agent.id); }} disabled={runningAgent !== null}
-                                className="rounded-xl px-3 py-1.5 font-barlow text-[12px] font-black uppercase tracking-wide transition-all active:scale-95 disabled:opacity-25"
-                                style={{
-                                  background: isRunning ? `${agent.accent}15` : `${agent.accent}22`,
-                                  color: agent.accent,
-                                  border: `1px solid ${agent.accent}30`,
-                                }}>
-                                {isRunning ? "···" : "Run"}
-                              </button>
-                            </div>
+                            ))}
+                          </div>
+                          <div className="font-barlow text-[24px] font-black tracking-tight">Emails</div>
+                          <div className="font-mono text-[8px] uppercase tracking-[0.2em] mt-0.5" style={{ color: "#fb923c" }}>4-Stage Pipeline</div>
+                          <div className="mt-3 px-3 py-1 rounded-full font-mono text-[8px]" style={{ color: "#fb923c70", background: "#fb923c0a", border: "1px solid #fb923c18" }}>
+                            {anyRunning ? "● running" : "🕖 7am daily"}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
+                        {/* Stats */}
+                        <div className="grid grid-cols-2" style={{ borderBottom: "1px solid #fb923c0e" }}>
+                          <div className="py-4 text-center" style={{ borderRight: "1px solid #fb923c0e" }}>
+                            <div className="font-barlow text-[30px] font-black leading-none" style={{ color: "#fb923c" }}>{emailsSent}</div>
+                            <div className="font-mono text-[7px] uppercase tracking-widest mt-1" style={{ color: "#2a2d35" }}>emails sent</div>
+                          </div>
+                          <div className="py-4 text-center">
+                            <div className="font-barlow text-[30px] font-black leading-none" style={{ color: "#4ade80" }}>{replies}</div>
+                            <div className="font-mono text-[7px] uppercase tracking-widest mt-1" style={{ color: "#2a2d35" }}>replied</div>
+                          </div>
+                        </div>
+                        {/* Last log */}
+                        <div className="px-4 py-2.5" style={{ borderBottom: "1px solid #fb923c0e", minHeight: "2.5rem" }}>
+                          <div className="font-mono text-[9px] leading-relaxed line-clamp-2" style={{ color: latestEmailLog ? "#4a4d56" : "#252830" }}>
+                            {latestEmailLog ? `▸ [${latestEmailLog.agent}] ${latestEmailLog.message}` : "No recent activity"}
+                          </div>
+                        </div>
+                        {/* Run button */}
+                        <div className="p-3.5" onClick={e => e.stopPropagation()}>
+                          <button onClick={e => { e.stopPropagation(); runAgent("pipeline"); }} disabled={runningAgent !== null}
+                            className="w-full rounded-2xl py-3 font-barlow text-[14px] font-black tracking-wide transition-all active:scale-95 disabled:opacity-50"
+                            style={{ background: anyRunning ? "#fb923c15" : "linear-gradient(135deg, #fb923c, #fb923cbb)", color: anyRunning ? "#fb923c" : "#050508", border: anyRunning ? "1px solid #fb923c30" : "none" }}>
+                            {anyRunning ? "Running…" : "▶ Run All"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
               </div>

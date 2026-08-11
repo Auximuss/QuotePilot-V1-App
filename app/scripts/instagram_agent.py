@@ -259,7 +259,6 @@ def main() -> None:
         log(supabase, "✓ Browser session active", "success")
 
         # ── Phase 1: find handles ──────────────────────────────────────────────
-        log(supabase, "🔍 Phase 1: searching for Instagram handles…")
         no_handle = (
             supabase.table("outreach_leads")
             .select("id, business_name, location, trade")
@@ -268,17 +267,21 @@ def main() -> None:
             .execute()
             .data
         )
+        log(supabase, f"🔍 Phase 1: {len(no_handle)} leads need Instagram handles")
         found = 0
-        for lead in no_handle:
+        for i, lead in enumerate(no_handle):
+            biz = lead['business_name'] or 'Unknown'
+            log(supabase, f"[{i+1}/{len(no_handle)}] Searching for @{biz} in {lead.get('location','?')}…")
             handle = find_handle(page, lead["business_name"] or "", lead.get("location") or "")
             if handle:
                 supabase.table("outreach_leads").update({"instagram_handle": handle}).eq("id", lead["id"]).execute()
-                log(supabase, f"📍 @{handle} → {lead['business_name']}")
+                log(supabase, f"✓ Found @{handle} for {biz}", "success")
                 found += 1
             else:
                 supabase.table("outreach_leads").update({"instagram_handle": "not_found"}).eq("id", lead["id"]).execute()
+                log(supabase, f"✗ No handle found for {biz}", "error")
             time.sleep(random.uniform(2, 5))
-        log(supabase, f"Phase 1 done — {found}/{len(no_handle)} handles found", "success")
+        log(supabase, f"Phase 1 complete — {found}/{len(no_handle)} handles found", "success")
 
         # ── Phase 2: send DMs ──────────────────────────────────────────────────
         log(supabase, "📨 Phase 2: sending DMs…")
@@ -297,20 +300,23 @@ def main() -> None:
             if sent >= MAX_DMS:
                 break
             handle = lead["instagram_handle"]
+            biz = lead.get('business_name', handle)
             try:
+                log(supabase, f"[{sent+1}/{min(MAX_DMS, len(to_dm))}] Generating DM for @{handle} ({biz})…")
                 dm_text = generate_dm(openai_client, lead)
+                log(supabase, f"→ Opening @{handle}'s profile…")
                 send_dm(page, handle, dm_text)
                 supabase.table("outreach_leads").update({
                     "instagram_dm_sent_at": datetime.now(timezone.utc).isoformat(),
                 }).eq("id", lead["id"]).execute()
-                log(supabase, f"✓ DM sent to @{handle} ({lead.get('business_name', '')})", "success")
+                log(supabase, f"✓ DM sent to @{handle} ({biz})", "success")
                 sent += 1
             except Exception as e:
-                log(supabase, f"✗ Failed @{handle}: {e}", "error")
+                log(supabase, f"✗ Failed @{handle} — {str(e)[:120]}", "error")
                 continue
             if sent < MAX_DMS and i < len(to_dm) - 1:
                 delay = random.uniform(DELAY_MIN, DELAY_MAX)
-                log(supabase, f"⏳ Waiting {round(delay/60, 1)} min before next DM…")
+                log(supabase, f"⏳ Waiting {round(delay/60, 1)} min before next DM… ({sent}/{MAX_DMS} sent so far)")
                 time.sleep(delay)
 
         log(supabase, f"✅ Done — {sent} DMs sent today", "success")
