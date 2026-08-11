@@ -220,6 +220,25 @@ export default function AdminPage() {
     setAgentsLoading(false);
   }
 
+  async function runInstagramLocal() {
+    setRunningAgent("instagram");
+    setAgentResult(null);
+    try {
+      const res = await fetch("http://localhost:4000/run", { method: "POST" });
+      const d = await res.json();
+      if (d.status === "already_running") {
+        setAgentResult("Already running — watch the live feed");
+      } else {
+        setAgentResult("✓ Agent started — Edge will open, watch the live feed");
+      }
+    } catch {
+      setAgentResult("⚠ Start the webhook first: python scripts/local_webhook.py");
+    }
+    setRunningAgent(null);
+    setTimeout(() => setAgentResult(null), 8000);
+    setTimeout(loadAgents, 4000);
+  }
+
   async function runAgent(agent: string) {
     setRunningAgent(agent);
     setAgentResult(null);
@@ -792,16 +811,14 @@ export default function AdminPage() {
                       <div className="font-mono text-[10px] max-w-[200px] leading-relaxed" style={{ color: "#3a3d46" }}>{agent.desc}</div>
                       {agent.id === "instagram" ? (<>
                         <button
-                          onClick={() => {
-                            const cmd = `python "C:\\Users\\Alexp\\OneDrive\\Pictures\\Desktop\\New folder (3)\\app\\scripts\\instagram_agent.py"`;
-                            window.prompt("Copy this command and paste into PowerShell:", cmd);
-                          }}
-                          className="flex-none rounded-2xl px-6 py-3 font-barlow text-[14px] font-bold tracking-wide transition-all active:scale-95"
-                          style={{ background: `linear-gradient(135deg, #e1306c, #e1306ccc)`, color: "#050508" }}>
-                          ▶ Copy Run Command
+                          onClick={runInstagramLocal}
+                          disabled={isRunning}
+                          className="flex-none rounded-2xl px-6 py-3 font-barlow text-[14px] font-bold tracking-wide transition-all active:scale-95 disabled:opacity-50"
+                          style={{ background: isRunning ? `${agent.accent}15` : `linear-gradient(135deg, #e1306c, #e1306ccc)`, color: isRunning ? "#e1306c" : "#050508", border: isRunning ? "1px solid #e1306c30" : "none" }}>
+                          {isRunning ? "Starting…" : "▶ Run Now"}
                         </button>
                         {agentResult && (
-                          <div className="flex-none rounded-xl px-4 py-2 font-mono text-[10px]" style={{ color: "#4ade80", background: "#060d07", border: "1px solid #4ade8020" }}>{agentResult}</div>
+                          <div className="flex-none rounded-xl px-4 py-2 font-mono text-[10px]" style={{ color: agentResult.startsWith("⚠") ? "#f87171" : "#4ade80", background: "#060d07", border: `1px solid ${agentResult.startsWith("⚠") ? "#f8717120" : "#4ade8020"}` }}>{agentResult}</div>
                         )}
                         </> ) : (
                         <button onClick={() => runAgent(agent.id)} disabled={runningAgent !== null}
@@ -960,158 +977,121 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* ── AGENT TILES  2×2 grid (email agents) ───────────────────── */}
-              <div>
-                <div className="font-mono text-[8px] uppercase tracking-[0.25em] mb-3" style={{ color: "#252a30" }}>Email Agents · tap to inspect</div>
-                <div className="grid grid-cols-2 gap-3">
-                  {AGENTS.filter(a => a.id !== "instagram").map(agent => {
-                    const isRunning = runningAgent === agent.id || runningAgent === "pipeline";
-                    const myLogs = agentLogs.filter(l => l.agent.toLowerCase() === agent.name.toLowerCase());
-                    const latestLog = myLogs[0];
-                    const errCount = myLogs.filter(l => l.type === "error").length;
-                    const successCount = myLogs.filter(l => l.type === "success").length;
-                    const stepIdx = isRunning && latestLog ? guessStep(agent.id, latestLog.message) : -1;
+              {/* ── TWO COLUMNS: Instagram | Emails ─────────────────────────── */}
+              <div className="grid grid-cols-2 gap-4">
+
+                {/* ── Instagram column ─────────────────────────────────────────── */}
+                <div>
+                  <div className="font-mono text-[8px] uppercase tracking-[0.25em] mb-3" style={{ color: "#e1306c50" }}>Instagram</div>
+                  {(() => {
+                    const igLogs = agentLogs.filter(l => l.agent.toLowerCase() === "instagram");
+                    const igHandles = leads.filter(l => l.instagram_handle && l.instagram_handle !== "not_found").length;
+                    const igDmsSent = leads.filter(l => l.instagram_dm_sent_at).length;
+                    const latestIgLog = igLogs[0];
+                    const igRunning = runningAgent === "instagram";
                     return (
-                      <div key={agent.id} onClick={() => setSelectedAgent(agent.id)}
-                        className="relative overflow-hidden rounded-3xl cursor-pointer transition-all duration-200 active:scale-[0.96]"
-                        style={{
-                          border: `1px solid ${isRunning ? `${agent.accent}45` : `${agent.accent}18`}`,
-                          boxShadow: isRunning ? `0 0 50px ${agent.accent}20` : "none",
-                        }}>
-                        {/* TOP: colored splash zone */}
-                        <div className="relative flex flex-col items-center justify-center pt-7 pb-5"
-                          style={{
-                            background: `linear-gradient(180deg, ${agent.accent}20 0%, ${agent.accent}08 100%)`,
-                            borderBottom: `1px solid ${agent.accent}15`,
-                          }}>
-                          {isRunning && <div className="absolute inset-0 pointer-events-none animate-pulse" style={{ background: `radial-gradient(ellipse 80% 60% at 50% 30%, ${agent.glow}, transparent)` }} />}
-                          {/* running arc */}
-                          {isRunning && (
-                            <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: `linear-gradient(90deg, transparent, ${agent.accent}, transparent)` }} />
-                          )}
-                          <div className="relative text-[44px] mb-1.5" style={{ filter: isRunning ? `drop-shadow(0 0 20px ${agent.accent}90)` : `drop-shadow(0 0 6px ${agent.accent}40)` }}>
-                            <span style={{ color: agent.accent }}>{agent.icon}</span>
-                          </div>
-                          <div className="font-barlow text-[19px] font-black tracking-tight">{agent.name}</div>
-                          <div className="font-mono text-[7.5px] uppercase tracking-widest mt-0.5" style={{ color: agent.accent }}>{agent.role}</div>
-                        </div>
-
-                        {/* BOTTOM: dark info zone */}
-                        <div style={{ background: "#09090c" }} className="p-3.5 space-y-3">
-                          {/* status + stats */}
-                          <div className="flex items-center justify-between">
-                            {isRunning ? (
-                              <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-[7.5px] uppercase tracking-wider animate-pulse" style={{ color: "#4ade80", background: "#4ade8012", border: "1px solid #4ade8025" }}>
-                                <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" />Live
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[7.5px] uppercase tracking-wider" style={{ color: "#2a2d35", background: "#111318", border: "1px solid #1a1c22" }}>Idle</span>
-                            )}
-                            <div className="flex items-center gap-2">
-                              <span className="font-barlow text-[20px] font-black leading-none" style={{ color: agent.accent }}>{successCount}</span>
-                              <span className="font-mono text-[7px]" style={{ color: "#252830" }}>ok</span>
-                              {errCount > 0 && <span className="font-mono text-[7.5px]" style={{ color: "#f87171" }}>{errCount}e</span>}
-                            </div>
-                          </div>
-
-                          {/* last action */}
-                          <div className="font-mono text-[9px] leading-snug line-clamp-2" style={{ color: isRunning && latestLog ? agent.accent : latestLog ? "#3a3d46" : "#1e2025", minHeight: "2.5em" }}>
-                            {isRunning && latestLog ? latestLog.message : latestLog ? latestLog.message : agent.desc.slice(0, 60) + "…"}
-                          </div>
-
-                          {/* run button */}
-                          {agent.id === "instagram" ? (
-                            <div className="w-full rounded-2xl py-2.5 font-mono text-[9px] text-center tracking-widest uppercase"
-                              style={{ color: agent.accent, background: `${agent.accent}10`, border: `1px solid ${agent.accent}25` }}>
-                              Auto · 9am daily
-                            </div>
-                          ) : (
-                            <button onClick={e => { e.stopPropagation(); runAgent(agent.id); }} disabled={runningAgent !== null}
-                              className="w-full rounded-2xl py-2.5 font-barlow text-[13px] font-black tracking-wide transition-all disabled:opacity-20 active:scale-95"
-                              style={{
-                                background: isRunning ? `${agent.accent}18` : `linear-gradient(135deg, ${agent.accent}, ${agent.accent}bb)`,
-                                color: isRunning ? agent.accent : "#060508",
-                              }}>
-                              {isRunning ? "···" : "Run ▶"}
-                            </button>
-                          )}
-                        </div>
-
-                        {/* step progress bar along bottom */}
-                        {isRunning && (
-                          <div className="flex h-1" style={{ background: "#131520" }}>
-                            {agent.steps.slice(0, 5).map((_, i) => {
-                              const done = i < stepIdx, active = i === stepIdx;
-                              return <div key={i} className="flex-1 transition-all" style={{ background: active ? agent.accent : done ? "#4ade8060" : "transparent" }} />;
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* ── INSTAGRAM AGENT (full-width below email grid) ───────────── */}
-              {(() => {
-                const agent = AGENTS.find(a => a.id === "instagram")!;
-                const myLogs = agentLogs.filter(l => l.agent.toLowerCase() === "instagram");
-                const successCount = myLogs.filter(l => l.type === "success").length;
-                const errCount = myLogs.filter(l => l.type === "error").length;
-                const latestLog = myLogs[0];
-                const igHandles = leads.filter(l => l.instagram_handle && l.instagram_handle !== "not_found").length;
-                const igDmsSent = leads.filter(l => l.instagram_dm_sent_at).length;
-                return (
-                  <div>
-                    <div className="font-mono text-[8px] uppercase tracking-[0.25em] mb-3" style={{ color: "#252a30" }}>Instagram · tap to inspect</div>
-                    <div className="relative overflow-hidden rounded-3xl cursor-pointer transition-all duration-200 active:scale-[0.99]"
-                      onClick={() => setSelectedAgent("instagram")}
-                      style={{ border: "1px solid #e1306c25", background: "linear-gradient(135deg, #0f0810, #09090c)" }}>
-                      <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, #e1306c50, transparent)" }} />
-                      <div className="relative flex items-center gap-5 px-5 py-5">
-                        {/* Icon */}
-                        <div className="flex h-14 w-14 flex-none items-center justify-center rounded-2xl text-[26px]"
-                          style={{ background: "linear-gradient(145deg, #e1306c22, #e1306c0a)", border: "1px solid #e1306c25" }}>
-                          <span style={{ color: "#e1306c" }}>◎</span>
-                        </div>
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2.5 mb-0.5">
-                            <span className="font-barlow text-[17px] font-bold tracking-tight">Instagram</span>
-                            <span className="font-mono text-[8px] uppercase tracking-[0.15em]" style={{ color: "#e1306c" }}>DM Outreach</span>
-                          </div>
-                          <div className="font-mono text-[9px] truncate" style={{ color: latestLog ? "#4a4d56" : "#252830" }}>
-                            {latestLog ? `▸ ${latestLog.message}` : "Runs via GitHub Actions · 9am weekdays"}
+                      <div className="relative overflow-hidden rounded-3xl cursor-pointer transition-all duration-200 active:scale-[0.98]"
+                        onClick={() => setSelectedAgent("instagram")}
+                        style={{ border: `1px solid ${igRunning ? "#e1306c45" : "#e1306c22"}`, background: "linear-gradient(160deg, #0f0810, #09090c)", boxShadow: igRunning ? "0 0 50px #e1306c20" : "none" }}>
+                        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, #e1306c50, transparent)" }} />
+                        {igRunning && <div className="absolute inset-0 pointer-events-none animate-pulse" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 30%, rgba(225,48,108,0.1), transparent)" }} />}
+                        {/* Top splash */}
+                        <div className="relative flex flex-col items-center justify-center pt-8 pb-6" style={{ background: "linear-gradient(180deg, #e1306c1e 0%, #e1306c07 100%)", borderBottom: "1px solid #e1306c12" }}>
+                          <div className="text-[52px] mb-2" style={{ color: "#e1306c", filter: igRunning ? "drop-shadow(0 0 24px #e1306c90)" : "drop-shadow(0 0 8px #e1306c40)" }}>◎</div>
+                          <div className="font-barlow text-[24px] font-black tracking-tight">Instagram</div>
+                          <div className="font-mono text-[8px] uppercase tracking-[0.2em] mt-0.5" style={{ color: "#e1306c" }}>DM Outreach</div>
+                          <div className="mt-3 px-3 py-1 rounded-full font-mono text-[8px]" style={{ color: "#e1306c70", background: "#e1306c0a", border: "1px solid #e1306c18" }}>
+                            {igRunning ? "● running" : "🕖 7am daily"}
                           </div>
                         </div>
                         {/* Stats */}
-                        <div className="flex flex-none items-center gap-5">
-                          <div className="text-center">
-                            <div className="font-barlow text-[22px] font-black leading-none" style={{ color: "#e1306c" }}>{igHandles}</div>
-                            <div className="font-mono text-[7px] uppercase tracking-widest mt-0.5" style={{ color: "#2a2d35" }}>handles</div>
+                        <div className="grid grid-cols-2" style={{ borderBottom: "1px solid #e1306c0e" }}>
+                          <div className="py-4 text-center" style={{ borderRight: "1px solid #e1306c0e" }}>
+                            <div className="font-barlow text-[30px] font-black leading-none" style={{ color: "#e1306c" }}>{igHandles}</div>
+                            <div className="font-mono text-[7px] uppercase tracking-widest mt-1" style={{ color: "#2a2d35" }}>handles</div>
                           </div>
-                          <div className="text-center">
-                            <div className="font-barlow text-[22px] font-black leading-none" style={{ color: "#e1306c" }}>{igDmsSent}</div>
-                            <div className="font-mono text-[7px] uppercase tracking-widest mt-0.5" style={{ color: "#2a2d35" }}>DMs sent</div>
+                          <div className="py-4 text-center">
+                            <div className="font-barlow text-[30px] font-black leading-none" style={{ color: "#e1306c" }}>{igDmsSent}</div>
+                            <div className="font-mono text-[7px] uppercase tracking-widest mt-1" style={{ color: "#2a2d35" }}>DMs sent</div>
                           </div>
-                          {errCount > 0 && (
-                            <div className="text-center">
-                              <div className="font-barlow text-[22px] font-black leading-none" style={{ color: "#f87171" }}>{errCount}</div>
-                              <div className="font-mono text-[7px] uppercase tracking-widest mt-0.5" style={{ color: "#2a2d35" }}>errors</div>
-                            </div>
-                          )}
+                        </div>
+                        {/* Last log */}
+                        <div className="px-4 py-2.5" style={{ borderBottom: "1px solid #e1306c0e", minHeight: "2.5rem" }}>
+                          <div className="font-mono text-[9px] leading-relaxed line-clamp-2" style={{ color: latestIgLog ? "#4a4d56" : "#252830" }}>
+                            {latestIgLog ? `▸ ${latestIgLog.message}` : "No recent activity"}
+                          </div>
+                        </div>
+                        {/* Run button */}
+                        <div className="p-3.5" onClick={e => e.stopPropagation()}>
                           <button
-                            onClick={e => { e.stopPropagation(); setSelectedAgent("instagram"); }}
-                            className="rounded-2xl px-4 py-2 font-mono text-[9px] uppercase tracking-widest transition-all active:scale-95"
-                            style={{ color: "#e1306c", background: "#e1306c15", border: "1px solid #e1306c40" }}>
-                            ▶ Run
+                            onClick={e => { e.stopPropagation(); runInstagramLocal(); }}
+                            disabled={igRunning}
+                            className="w-full rounded-2xl py-3 font-barlow text-[14px] font-black tracking-wide transition-all active:scale-95 disabled:opacity-50"
+                            style={{
+                              background: igRunning ? "#e1306c15" : "linear-gradient(135deg, #e1306c, #e1306cbb)",
+                              color: igRunning ? "#e1306c" : "#050508",
+                              border: igRunning ? "1px solid #e1306c30" : "none",
+                            }}>
+                            {igRunning ? "Starting…" : "▶ Run Now"}
                           </button>
                         </div>
                       </div>
-                    </div>
+                    );
+                  })()}
+                </div>
+
+                {/* ── Emails column ─────────────────────────────────────────────── */}
+                <div>
+                  <div className="font-mono text-[8px] uppercase tracking-[0.25em] mb-3" style={{ color: "#252a30" }}>Emails</div>
+                  <div className="space-y-2.5">
+                    {AGENTS.filter(a => a.id !== "instagram").map(agent => {
+                      const isRunning = runningAgent === agent.id || runningAgent === "pipeline";
+                      const myLogs = agentLogs.filter(l => l.agent.toLowerCase() === agent.name.toLowerCase());
+                      const latestLog = myLogs[0];
+                      const errCount = myLogs.filter(l => l.type === "error").length;
+                      const successCount = myLogs.filter(l => l.type === "success").length;
+                      return (
+                        <div key={agent.id} onClick={() => setSelectedAgent(agent.id)}
+                          className="relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-200 active:scale-[0.97]"
+                          style={{
+                            border: `1px solid ${isRunning ? `${agent.accent}45` : `${agent.accent}18`}`,
+                            background: "#09090c",
+                            boxShadow: isRunning ? `0 0 30px ${agent.accent}18` : "none",
+                          }}>
+                          {isRunning && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: `linear-gradient(90deg, transparent, ${agent.accent}, transparent)` }} />}
+                          <div className="flex items-center gap-3 px-4 py-3.5">
+                            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-xl text-[20px]"
+                              style={{ background: `${agent.accent}15`, border: `1px solid ${agent.accent}20` }}>
+                              <span style={{ color: agent.accent, filter: isRunning ? `drop-shadow(0 0 8px ${agent.accent}90)` : "none" }}>{agent.icon}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-barlow text-[14px] font-bold tracking-tight">{agent.name}</div>
+                              <div className="font-mono text-[8.5px] truncate" style={{ color: isRunning && latestLog ? agent.accent : latestLog ? "#3a3d46" : "#252830" }}>
+                                {isRunning && latestLog ? latestLog.message.slice(0, 40) : latestLog ? latestLog.message.slice(0, 40) : agent.role}
+                              </div>
+                            </div>
+                            <div className="flex flex-none items-center gap-2.5" onClick={e => e.stopPropagation()}>
+                              <span className="font-barlow text-[18px] font-black leading-none" style={{ color: isRunning ? "#4ade80" : agent.accent }}>
+                                {isRunning ? <span className="inline-block h-2 w-2 rounded-full bg-[#4ade80] animate-pulse" /> : successCount}
+                              </span>
+                              <button onClick={e => { e.stopPropagation(); runAgent(agent.id); }} disabled={runningAgent !== null}
+                                className="rounded-xl px-3 py-1.5 font-barlow text-[12px] font-black uppercase tracking-wide transition-all active:scale-95 disabled:opacity-25"
+                                style={{
+                                  background: isRunning ? `${agent.accent}15` : `${agent.accent}22`,
+                                  color: agent.accent,
+                                  border: `1px solid ${agent.accent}30`,
+                                }}>
+                                {isRunning ? "···" : "Run"}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })()}
+                </div>
+
+              </div>
 
               {/* ── LIVE FEED ─────────────────────────────────────────────────── */}
               <div>

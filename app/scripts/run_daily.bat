@@ -1,0 +1,5 @@
+@echo off
+set SUPABASE_URL=https://mppnrqtfcbapkohsogap.supabase.co
+set SUPABASE_SERVICE_ROLE_KEY=sb_secret_elk5sXLpQJuZgHM7eA3cug_CSQH8rEA
+set OPENAI_API_KEY=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
+python "C:\Users\Alexp\OneDrive\Pictures\Desktop\New folder (3)\app\scripts\instagram_agent.py"
