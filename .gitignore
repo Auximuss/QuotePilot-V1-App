@@ -31,5 +31,8 @@ next-env.d.ts
 .DS_Store
 Thumbs.db
 
+# Chrome/Edge browser profile — never commit session data
+app/scripts/chrome_profile/
+
 .vercel
 .env*

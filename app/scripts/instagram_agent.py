@@ -172,7 +172,10 @@ def send_email_report(supabase, dms_sent: list, handles_found: int,
 
 # ── Hashtag scraper ────────────────────────────────────────────────────────────
 def scrape_hashtag(page, hashtag: str, limit: int = 25) -> list:
-    """Return list of {username, trade} found in a hashtag."""
+    """
+    Intercept Instagram's own API responses when loading a hashtag page.
+    Much more reliable than constructing API calls manually.
+    """
     trade = "tradesperson"
     h = hashtag.lower()
     if "plumb"   in h: trade = "plumber"
@@ -182,37 +185,65 @@ def scrape_hashtag(page, hashtag: str, limit: int = 25) -> list:
     elif "join"   in h: trade = "joiner"
     elif "build"  in h: trade = "builder"
 
-    if "instagram.com" not in page.url:
-        page.goto("https://www.instagram.com/", wait_until="domcontentloaded")
-        time.sleep(3)
+    captured = []
+    seen = set()
 
+    def on_response(response):
+        try:
+            url = response.url
+            # Catch both /sections/ and GraphQL responses for this hashtag
+            if hashtag.lower() not in url.lower() and "graphql" not in url:
+                return
+            if response.status != 200:
+                return
+            data = response.json()
+
+            # Format 1: /api/v1/tags/{tag}/sections/
+            for section in data.get("sections", []):
+                for m in section.get("layout_content", {}).get("medias", []):
+                    uname = m.get("media", {}).get("user", {}).get("username", "")
+                    if uname and uname not in seen:
+                        seen.add(uname)
+                        captured.append({"username": uname, "trade": trade})
+
+            # Format 2: GraphQL edge_hashtag_to_media
+            edges = (data.get("data", {}).get("hashtag", {})
+                         .get("edge_hashtag_to_media", {}).get("edges", []))
+            for edge in edges:
+                uname = edge.get("node", {}).get("owner", {}).get("username", "")
+                if uname and uname not in seen:
+                    seen.add(uname)
+                    captured.append({"username": uname, "trade": trade})
+
+            # Format 3: newer xdt_api__v1__feed__hashtag__connection
+            items = (data.get("data", {})
+                         .get("xdt_api__v1__feed__hashtag__connection", {})
+                         .get("edges", []))
+            for item in items:
+                uname = (item.get("node", {}).get("user", {}).get("username", "")
+                         or item.get("node", {}).get("owner", {}).get("username", ""))
+                if uname and uname not in seen:
+                    seen.add(uname)
+                    captured.append({"username": uname, "trade": trade})
+
+        except Exception:
+            pass
+
+    page.on("response", on_response)
     try:
-        data = page.evaluate("""async (tag) => {
-            const r = await fetch(`/api/v1/tags/${tag}/sections/`, {
-                method: 'POST',
-                headers: {
-                    'X-IG-App-ID': '936619743392459',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: 'tab=recent&page=1&surface=grid'
-            });
-            return r.json();
-        }""", hashtag)
-
-        results = []
-        for section in data.get("sections", []):
-            medias = section.get("layout_content", {}).get("medias", [])
-            for m in medias:
-                uname = m.get("media", {}).get("user", {}).get("username", "")
-                if uname:
-                    results.append({"username": uname, "trade": trade})
-                if len(results) >= limit:
-                    return results
-        return results
+        page.goto(
+            f"https://www.instagram.com/explore/tags/{hashtag}/",
+            wait_until="networkidle",
+            timeout=30000,
+        )
+        time.sleep(3)
     except Exception as e:
-        print(f"[WARN] Hashtag scrape error #{hashtag}: {e}", flush=True)
-        return []
+        print(f"[WARN] Hashtag page load error #{hashtag}: {e}", flush=True)
+    finally:
+        page.remove_listener("response", on_response)
+
+    print(f"[DEBUG] #{hashtag} intercepted {len(captured)} handles", flush=True)
+    return captured[:limit]
 
 
 # ── DM text generation ─────────────────────────────────────────────────────────
