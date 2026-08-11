@@ -382,9 +382,29 @@ def find_handle(page, business_name: str, location: str) -> str | None:
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────
+def _prevent_sleep():
+    """Tell Windows not to sleep while the agent is running."""
+    try:
+        import ctypes
+        ES_CONTINUOUS       = 0x80000000
+        ES_SYSTEM_REQUIRED  = 0x00000001
+        ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED)
+    except Exception:
+        pass
+
+def _allow_sleep():
+    """Re-enable normal sleep behaviour after agent finishes."""
+    try:
+        import ctypes
+        ctypes.windll.kernel32.SetThreadExecutionState(0x80000000)
+    except Exception:
+        pass
+
+
 def main() -> None:
     supabase     = create_client(SUPABASE_URL, SUPABASE_KEY)
     openai_client = OpenAI(api_key=OPENAI_KEY)
+    _prevent_sleep()
     log(supabase, "📸 Instagram agent starting (browser mode)…")
 
     try:
@@ -567,6 +587,7 @@ def main() -> None:
 
         log(supabase, f"✅ Done — {sent} DMs sent today", "success")
         context.close()
+        _allow_sleep()
 
         # ── Send daily email report ────────────────────────────────────────────
         send_email_report(
