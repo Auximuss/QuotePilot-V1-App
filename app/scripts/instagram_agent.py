@@ -30,17 +30,23 @@ DELAY_MIN    = 480   # 8 min between DMs
 DELAY_MAX    = 900   # 15 min between DMs
 PROFILE_DIR  = str(Path(__file__).parent / "chrome_profile")
 
-# Hashtags to scrape UK tradespeople from
-TRADE_HASHTAGS = [
-    "ukplumber", "plumberuk", "ukelctrician", "electricianuk",
-    "uktiler", "tileruk", "ukroofer", "rooferuk",
-    "ukjoiner", "joineruk", "ukbuilder", "builderuk",
-    "uktradesmen", "uktrades", "tradesmanlife",
-    "nottinghamplumber", "nottinghamelectrician", "nottinghamtiler",
-    "derbyplumber", "derbyelectrician", "derbyroofer",
-    "manchesterplumber", "manchesterelectrician",
-    "leedsplumber", "leedselectrician",
-    "sheffieldplumber", "sheffieldelectrician",
+# Trade + location search combos for Phase 0
+TRADE_SEARCHES = [
+    ("plumber",      "Nottingham"), ("plumber",      "Derby"),
+    ("plumber",      "Manchester"), ("plumber",      "Leeds"),
+    ("plumber",      "Sheffield"),  ("plumber",      "Birmingham"),
+    ("electrician",  "Nottingham"), ("electrician",  "Derby"),
+    ("electrician",  "Manchester"), ("electrician",  "Leeds"),
+    ("electrician",  "Sheffield"),  ("electrician",  "Birmingham"),
+    ("roofer",       "Nottingham"), ("roofer",       "Derby"),
+    ("roofer",       "Manchester"), ("roofer",       "Leeds"),
+    ("tiler",        "Nottingham"), ("tiler",        "Derby"),
+    ("tiler",        "Manchester"), ("tiler",        "Leeds"),
+    ("joiner",       "Nottingham"), ("joiner",       "Derby"),
+    ("builder",      "Nottingham"), ("builder",      "Derby"),
+    ("plasterer",    "Nottingham"), ("plasterer",    "Derby"),
+    ("carpenter",    "Nottingham"), ("carpenter",    "Manchester"),
+    ("plumber",      "Leicester"),  ("electrician",  "Leicester"),
 ]
 
 
@@ -171,79 +177,34 @@ def send_email_report(supabase, dms_sent: list, handles_found: int,
 
 
 # ── Hashtag scraper ────────────────────────────────────────────────────────────
-def scrape_hashtag(page, hashtag: str, limit: int = 25) -> list:
+def search_trade_handles(page, trade: str, location: str, limit: int = 10) -> list:
     """
-    Intercept Instagram's own API responses when loading a hashtag page.
-    Much more reliable than constructing API calls manually.
+    Use Instagram's proven search API to find tradespeople by trade + location.
+    Returns list of {username, trade, location}.
     """
-    trade = "tradesperson"
-    h = hashtag.lower()
-    if "plumb"   in h: trade = "plumber"
-    elif "electr" in h: trade = "electrician"
-    elif "til"    in h: trade = "tiler"
-    elif "roof"   in h: trade = "roofer"
-    elif "join"   in h: trade = "joiner"
-    elif "build"  in h: trade = "builder"
-
-    captured = []
-    seen = set()
-
-    def on_response(response):
-        try:
-            url = response.url
-            # Catch both /sections/ and GraphQL responses for this hashtag
-            if hashtag.lower() not in url.lower() and "graphql" not in url:
-                return
-            if response.status != 200:
-                return
-            data = response.json()
-
-            # Format 1: /api/v1/tags/{tag}/sections/
-            for section in data.get("sections", []):
-                for m in section.get("layout_content", {}).get("medias", []):
-                    uname = m.get("media", {}).get("user", {}).get("username", "")
-                    if uname and uname not in seen:
-                        seen.add(uname)
-                        captured.append({"username": uname, "trade": trade})
-
-            # Format 2: GraphQL edge_hashtag_to_media
-            edges = (data.get("data", {}).get("hashtag", {})
-                         .get("edge_hashtag_to_media", {}).get("edges", []))
-            for edge in edges:
-                uname = edge.get("node", {}).get("owner", {}).get("username", "")
-                if uname and uname not in seen:
-                    seen.add(uname)
-                    captured.append({"username": uname, "trade": trade})
-
-            # Format 3: newer xdt_api__v1__feed__hashtag__connection
-            items = (data.get("data", {})
-                         .get("xdt_api__v1__feed__hashtag__connection", {})
-                         .get("edges", []))
-            for item in items:
-                uname = (item.get("node", {}).get("user", {}).get("username", "")
-                         or item.get("node", {}).get("owner", {}).get("username", ""))
-                if uname and uname not in seen:
-                    seen.add(uname)
-                    captured.append({"username": uname, "trade": trade})
-
-        except Exception:
-            pass
-
-    page.on("response", on_response)
-    try:
-        page.goto(
-            f"https://www.instagram.com/explore/tags/{hashtag}/",
-            wait_until="networkidle",
-            timeout=30000,
-        )
+    query = f"{trade} {location}"
+    if "instagram.com" not in page.url:
+        page.goto("https://www.instagram.com/", wait_until="domcontentloaded")
         time.sleep(3)
+    try:
+        data = page.evaluate("""async (q) => {
+            const r = await fetch(
+                `/web/search/topsearch/?query=${encodeURIComponent(q)}&context=blended`,
+                { headers: { 'X-IG-App-ID': '936619743392459',
+                             'X-Requested-With': 'XMLHttpRequest' } }
+            );
+            return r.json();
+        }""", query)
+        if data.get("status") != "ok":
+            return []
+        results = []
+        for u in data.get("users", [])[:limit]:
+            uname = u["user"]["username"]
+            results.append({"username": uname, "trade": trade, "location": location})
+        return results
     except Exception as e:
-        print(f"[WARN] Hashtag page load error #{hashtag}: {e}", flush=True)
-    finally:
-        page.remove_listener("response", on_response)
-
-    print(f"[DEBUG] #{hashtag} intercepted {len(captured)} handles", flush=True)
-    return captured[:limit]
+        print(f"[WARN] Trade search error ({query}): {e}", flush=True)
+        return []
 
 
 # ── DM text generation ─────────────────────────────────────────────────────────
@@ -498,31 +459,31 @@ def main() -> None:
         log(supabase, f"  {ready_to_dm} handles ready to DM — scraping {TARGET_NEW} more")
 
         phase0_added = 0
-        for hashtag in TRADE_HASHTAGS:
+        for (trade, location) in TRADE_SEARCHES:
             if phase0_added >= TARGET_NEW:
                 break
-            log(supabase, f"  Scraping #{hashtag}…")
-            candidates = scrape_hashtag(page, hashtag, limit=30)
-            added_this_tag = 0
+            candidates = search_trade_handles(page, trade, location, limit=10)
+            added_this_search = 0
             for c in candidates:
                 if c["username"] in existing_handles:
                     continue
                 try:
                     supabase.table("outreach_leads").insert({
                         "business_name": c["username"],
-                        "location": "UK",
+                        "location": c["location"],
                         "trade": c["trade"],
                         "instagram_handle": c["username"],
                     }).execute()
                     existing_handles.add(c["username"])
                     phase0_added += 1
-                    added_this_tag += 1
+                    added_this_search += 1
                 except Exception:
                     pass
                 if phase0_added >= TARGET_NEW:
                     break
-            log(supabase, f"  ✓ #{hashtag} → {added_this_tag} new handles")
-            time.sleep(random.uniform(3, 6))
+            if added_this_search:
+                log(supabase, f"  ✓ {trade} {location} → {added_this_search} new handles")
+            time.sleep(random.uniform(1, 3))
 
         log(supabase, f"Phase 0 complete — {phase0_added} new handles added", "success")
 
