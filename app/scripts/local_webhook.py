@@ -118,15 +118,31 @@ def self_register():
     except Exception as e:
         print(f"[WARN] Could not register startup: {e}", flush=True)
 
-    # ── Register 7am daily task via schtasks (no admin needed for basic tasks) ─
+    # ── Register 7am daily task with wake-from-sleep via PowerShell ────────────
     try:
-        cmd = (
-            f'schtasks /create /tn "DemandPilot_Instagram_7AM" '
-            f'/tr "cmd.exe /c \\"{bat_file}\\"" '
-            f'/sc DAILY /st 07:00 /f'
+        ps = f"""
+$action  = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument '/c "{bat_file}"'
+$trigger = New-ScheduledTaskTrigger -Daily -At 07:00
+$settings = New-ScheduledTaskSettingsSet `
+    -WakeToRun `
+    -ExecutionTimeLimit (New-TimeSpan -Hours 4) `
+    -StartWhenAvailable
+Register-ScheduledTask `
+    -TaskName 'DemandPilot_Instagram_7AM' `
+    -Action $action `
+    -Trigger $trigger `
+    -Settings $settings `
+    -Force | Out-Null
+Write-Output 'ok'
+"""
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", ps],
+            capture_output=True, text=True
         )
-        subprocess.run(cmd, shell=True, check=True, capture_output=True)
-        print("✓ 7am daily task registered in Task Scheduler", flush=True)
+        if "ok" in result.stdout:
+            print("✓ 7am daily task registered (will wake laptop from sleep)", flush=True)
+        else:
+            raise Exception(result.stderr.strip())
     except Exception as e:
         print(f"[WARN] Could not register 7am task: {e}", flush=True)
 

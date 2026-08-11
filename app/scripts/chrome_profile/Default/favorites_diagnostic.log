@@ -131,3 +131,14 @@
 2026-08-11 13:42:25.502: [INFO] BookmarkModelLoaded, ids_reassigned: 0
 2026-08-11 13:42:25.502: [INFO] BookmarksLoadDropped droppedNodes=0
 2026-08-11 13:42:25.502: [INFO] BookmarksSnapshot Startup total=3 bar=3 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-08-11 19:57:23.991: [INFO] CurrentProfilePath: C:\Users\Alexp\OneDrive\Pictures\Desktop\New folder (3)\app\scripts\chrome_profile\Default
+2026-08-11 19:57:23.991: [INFO] Profiles total count: 1
+2026-08-11 19:57:23.992: [INFO] Profile: name=Personal path=C:\Users\Alexp\OneDrive\Pictures\Desktop\New folder (3)\app\scripts\chrome_profile\Default lastActive=2026-08-11T13:42:39.209Z
+2026-08-11 19:57:23.992: [INFO] LastUsedProfileDir: C:\Users\Alexp\OneDrive\Pictures\Desktop\New folder (3)\app\scripts\chrome_profile\Default
+2026-08-11 19:57:23.992: [INFO] MostRecentlyActiveProfile: name=Personal path=C:\Users\Alexp\OneDrive\Pictures\Desktop\New folder (3)\app\scripts\chrome_profile\Default lastActive=2026-08-11T13:42:39.209Z
+2026-08-11 19:57:23.992: [INFO] VisibilityChanged: 0
+2026-08-11 19:57:24.081: [INFO] OnDoneLoading sync enabled: 0
+2026-08-11 19:57:24.081: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2026-08-11 19:57:24.081: [INFO] BookmarksLoadDropped droppedNodes=0
+2026-08-11 19:57:24.081: [INFO] BookmarksSnapshot Startup total=3 bar=3 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-08-11 19:59:06.968: [INFO] BookmarksSnapshot Shutdown total=3 bar=3 other=0 mobile=0 showBar=0 showBarNTP=1

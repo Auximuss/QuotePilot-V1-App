@@ -12,6 +12,9 @@ import os
 import sys
 import time
 import random
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -22,7 +25,7 @@ SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
 OPENAI_KEY   = os.environ["OPENAI_API_KEY"]
 
-MAX_DMS      = 25
+MAX_DMS      = 20
 DELAY_MIN    = 480   # 8 min between DMs
 DELAY_MAX    = 900   # 15 min between DMs
 PROFILE_DIR  = str(Path(__file__).parent / "chrome_profile")
@@ -37,6 +40,121 @@ def log(supabase, message: str, type: str = "info") -> None:
         }).execute()
     except Exception as e:
         print(f"[WARN] Log write failed: {e}", flush=True)
+
+
+# ── Email report ───────────────────────────────────────────────────────────────
+def send_email_report(supabase, dms_sent: list, handles_found: int,
+                      handles_total: int, failures: list) -> None:
+    to_email   = os.environ.get("REPORT_EMAIL", "")
+    from_email = os.environ.get("REPORT_EMAIL", "")
+    password   = os.environ.get("EMAIL_APP_PASSWORD", "")
+    if not to_email or not password:
+        print("[WARN] REPORT_EMAIL / EMAIL_APP_PASSWORD not set — skipping email report", flush=True)
+        return
+
+    # Cumulative stats from Supabase
+    try:
+        total_sent = supabase.table("outreach_leads") \
+            .select("id", count="exact") \
+            .not_.is_("instagram_dm_sent_at", "null") \
+            .execute().count or 0
+        total_leads = supabase.table("outreach_leads") \
+            .select("id", count="exact").execute().count or 0
+    except Exception:
+        total_sent = len(dms_sent)
+        total_leads = 0
+
+    today = datetime.now().strftime("%d %b %Y")
+    sent_count = len(dms_sent)
+    fail_count = len(failures)
+
+    # Build DM rows
+    dm_rows = "".join(
+        f'<tr><td style="padding:6px 12px;border-bottom:1px solid #1e2a1e;">'
+        f'<a href="https://instagram.com/{d["handle"]}" style="color:#4ade80;text-decoration:none;">@{d["handle"]}</a></td>'
+        f'<td style="padding:6px 12px;border-bottom:1px solid #1e2a1e;color:#aaa;">{d["biz"]}</td></tr>'
+        for d in dms_sent
+    )
+    fail_rows = "".join(
+        f'<tr><td style="padding:6px 12px;border-bottom:1px solid #2a1e1e;color:#f87171;">@{f["handle"]}</td>'
+        f'<td style="padding:6px 12px;border-bottom:1px solid #2a1e1e;color:#aaa;">{f["reason"]}</td></tr>'
+        for f in failures
+    ) if failures else ""
+
+    fail_section = f"""
+    <h3 style="color:#f87171;margin:24px 0 8px;">⚠ Failures ({fail_count})</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr><th style="text-align:left;padding:6px 12px;color:#888;">Handle</th>
+          <th style="text-align:left;padding:6px 12px;color:#888;">Reason</th></tr>
+      {fail_rows}
+    </table>""" if failures else ""
+
+    html = f"""
+<!DOCTYPE html>
+<html><body style="background:#0a0f0a;color:#e0e0e0;font-family:'Segoe UI',sans-serif;margin:0;padding:32px;">
+<div style="max-width:600px;margin:0 auto;">
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+    <span style="font-size:24px;">📸</span>
+    <div>
+      <div style="font-size:20px;font-weight:700;color:#fff;">Demand Pilot</div>
+      <div style="font-size:13px;color:#888;">Instagram Report — {today}</div>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div style="display:flex;gap:12px;margin-bottom:24px;">
+    <div style="flex:1;background:#111;border:1px solid #1e2a1e;border-radius:12px;padding:16px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#4ade80;">{sent_count}</div>
+      <div style="font-size:12px;color:#888;margin-top:4px;">DMs sent today</div>
+    </div>
+    <div style="flex:1;background:#111;border:1px solid #1e2a1e;border-radius:12px;padding:16px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#4ade80;">{handles_found}</div>
+      <div style="font-size:12px;color:#888;margin-top:4px;">Handles found</div>
+    </div>
+    <div style="flex:1;background:#111;border:1px solid #1e2a1e;border-radius:12px;padding:16px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#4ade80;">{total_sent}</div>
+      <div style="font-size:12px;color:#888;margin-top:4px;">Total DMs all-time</div>
+    </div>
+    <div style="flex:1;background:#111;border:1px solid #1e2a1e;border-radius:12px;padding:16px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#60a5fa;">{total_leads}</div>
+      <div style="font-size:12px;color:#888;margin-top:4px;">Total leads</div>
+    </div>
+  </div>
+
+  <!-- DMs sent -->
+  <h3 style="color:#4ade80;margin:0 0 8px;">✓ DMs sent today ({sent_count}/{MAX_DMS})</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px;">
+    <tr>
+      <th style="text-align:left;padding:6px 12px;color:#888;border-bottom:1px solid #1e2a1e;">Handle</th>
+      <th style="text-align:left;padding:6px 12px;color:#888;border-bottom:1px solid #1e2a1e;">Business</th>
+    </tr>
+    {dm_rows if dm_rows else '<tr><td colspan="2" style="padding:12px;color:#888;">No DMs sent this run</td></tr>'}
+  </table>
+
+  {fail_section}
+
+  <div style="margin-top:32px;padding-top:16px;border-top:1px solid #1e2a1e;font-size:12px;color:#555;">
+    Demand Pilot · Instagram outreach bot · Handles searched: {handles_found}/{handles_total}
+  </div>
+</div>
+</body></html>"""
+
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = f"📸 Instagram Report — {sent_count} DMs sent · {today}"
+        msg["From"]    = from_email
+        msg["To"]      = to_email
+        msg.attach(MIMEText(html, "html"))
+
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.ehlo()
+            server.starttls()
+            server.login(from_email, password)
+            server.sendmail(from_email, to_email, msg.as_string())
+        print(f"[INFO] ✉ Daily report emailed to {to_email}", flush=True)
+    except Exception as e:
+        print(f"[WARN] Email report failed: {e}", flush=True)
 
 
 # ── DM text generation ─────────────────────────────────────────────────────────
@@ -206,6 +324,9 @@ def find_handle(page, business_name: str, location: str) -> str | None:
                 return uname
         return users[0]["user"]["username"]
     except Exception as e:
+        err = str(e)
+        if "closed" in err.lower():
+            raise  # Let main loop recover the browser
         print(f"[WARN] find_handle error for '{business_name}': {e}", flush=True)
         return None
 
@@ -272,7 +393,19 @@ def main() -> None:
         for i, lead in enumerate(no_handle):
             biz = lead['business_name'] or 'Unknown'
             log(supabase, f"[{i+1}/{len(no_handle)}] Searching for @{biz} in {lead.get('location','?')}…")
-            handle = find_handle(page, lead["business_name"] or "", lead.get("location") or "")
+            try:
+                handle = find_handle(page, lead["business_name"] or "", lead.get("location") or "")
+            except Exception as recover_err:
+                # Browser closed mid-run — try to reopen it
+                log(supabase, "⚠ Browser closed unexpectedly, reopening…", "warn")
+                try:
+                    page = context.new_page()
+                    page.goto("https://www.instagram.com/", wait_until="domcontentloaded")
+                    time.sleep(5)
+                    handle = find_handle(page, lead["business_name"] or "", lead.get("location") or "")
+                except Exception:
+                    log(supabase, "✗ Could not recover browser — stopping Phase 1", "error")
+                    break
             if handle:
                 supabase.table("outreach_leads").update({"instagram_handle": handle}).eq("id", lead["id"]).execute()
                 log(supabase, f"✓ Found @{handle} for {biz}", "success")
@@ -296,6 +429,8 @@ def main() -> None:
             .data
         )
         sent = 0
+        dms_sent_report  = []   # for email report
+        failures_report  = []
         for i, lead in enumerate(to_dm):
             if sent >= MAX_DMS:
                 break
@@ -310,9 +445,12 @@ def main() -> None:
                     "instagram_dm_sent_at": datetime.now(timezone.utc).isoformat(),
                 }).eq("id", lead["id"]).execute()
                 log(supabase, f"✓ DM sent to @{handle} ({biz})", "success")
+                dms_sent_report.append({"handle": handle, "biz": biz})
                 sent += 1
             except Exception as e:
-                log(supabase, f"✗ Failed @{handle} — {str(e)[:120]}", "error")
+                err = str(e)[:120]
+                log(supabase, f"✗ Failed @{handle} — {err}", "error")
+                failures_report.append({"handle": handle, "reason": err})
                 continue
             if sent < MAX_DMS and i < len(to_dm) - 1:
                 delay = random.uniform(DELAY_MIN, DELAY_MAX)
@@ -321,6 +459,15 @@ def main() -> None:
 
         log(supabase, f"✅ Done — {sent} DMs sent today", "success")
         context.close()
+
+        # ── Send daily email report ────────────────────────────────────────────
+        send_email_report(
+            supabase,
+            dms_sent=dms_sent_report,
+            handles_found=found,
+            handles_total=len(no_handle),
+            failures=failures_report,
+        )
 
 
 if __name__ == "__main__":
