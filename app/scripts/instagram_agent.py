@@ -30,6 +30,19 @@ DELAY_MIN    = 480   # 8 min between DMs
 DELAY_MAX    = 900   # 15 min between DMs
 PROFILE_DIR  = str(Path(__file__).parent / "chrome_profile")
 
+# Hashtags to scrape UK tradespeople from
+TRADE_HASHTAGS = [
+    "ukplumber", "plumberuk", "ukelctrician", "electricianuk",
+    "uktiler", "tileruk", "ukroofer", "rooferuk",
+    "ukjoiner", "joineruk", "ukbuilder", "builderuk",
+    "uktradesmen", "uktrades", "tradesmanlife",
+    "nottinghamplumber", "nottinghamelectrician", "nottinghamtiler",
+    "derbyplumber", "derbyelectrician", "derbyroofer",
+    "manchesterplumber", "manchesterelectrician",
+    "leedsplumber", "leedselectrician",
+    "sheffieldplumber", "sheffieldelectrician",
+]
+
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 def log(supabase, message: str, type: str = "info") -> None:
@@ -155,6 +168,51 @@ def send_email_report(supabase, dms_sent: list, handles_found: int,
         print(f"[INFO] ✉ Daily report emailed to {to_email}", flush=True)
     except Exception as e:
         print(f"[WARN] Email report failed: {e}", flush=True)
+
+
+# ── Hashtag scraper ────────────────────────────────────────────────────────────
+def scrape_hashtag(page, hashtag: str, limit: int = 25) -> list:
+    """Return list of {username, trade} found in a hashtag."""
+    trade = "tradesperson"
+    h = hashtag.lower()
+    if "plumb"   in h: trade = "plumber"
+    elif "electr" in h: trade = "electrician"
+    elif "til"    in h: trade = "tiler"
+    elif "roof"   in h: trade = "roofer"
+    elif "join"   in h: trade = "joiner"
+    elif "build"  in h: trade = "builder"
+
+    if "instagram.com" not in page.url:
+        page.goto("https://www.instagram.com/", wait_until="domcontentloaded")
+        time.sleep(3)
+
+    try:
+        data = page.evaluate("""async (tag) => {
+            const r = await fetch(`/api/v1/tags/${tag}/sections/`, {
+                method: 'POST',
+                headers: {
+                    'X-IG-App-ID': '936619743392459',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'tab=recent&page=1&surface=grid'
+            });
+            return r.json();
+        }""", hashtag)
+
+        results = []
+        for section in data.get("sections", []):
+            medias = section.get("layout_content", {}).get("medias", [])
+            for m in medias:
+                uname = m.get("media", {}).get("user", {}).get("username", "")
+                if uname:
+                    results.append({"username": uname, "trade": trade})
+                if len(results) >= limit:
+                    return results
+        return results
+    except Exception as e:
+        print(f"[WARN] Hashtag scrape error #{hashtag}: {e}", flush=True)
+        return []
 
 
 # ── DM text generation ─────────────────────────────────────────────────────────
@@ -378,6 +436,64 @@ def main() -> None:
             time.sleep(2)
 
         log(supabase, "✓ Browser session active", "success")
+
+        # ── Phase 0: scrape handles from hashtags ──────────────────────────────
+        log(supabase, "🔎 Phase 0: finding UK tradespeople via hashtags…")
+        # Load all existing handles to avoid duplicates
+        existing_rows = (
+            supabase.table("outreach_leads")
+            .select("instagram_handle")
+            .not_.is_("instagram_handle", "null")
+            .execute()
+            .data
+        )
+        existing_handles = {
+            r["instagram_handle"] for r in existing_rows
+            if r["instagram_handle"] not in (None, "not_found")
+        }
+
+        # How many un-DMed handles do we already have?
+        ready_to_dm = (
+            supabase.table("outreach_leads")
+            .select("id", count="exact")
+            .not_.is_("instagram_handle", "null")
+            .neq("instagram_handle", "not_found")
+            .is_("instagram_dm_sent_at", "null")
+            .execute()
+            .count or 0
+        )
+
+        TARGET_NEW = max(0, MAX_DMS * 2 - ready_to_dm)  # top up to 2× daily target
+        log(supabase, f"  {ready_to_dm} handles ready to DM — scraping {TARGET_NEW} more")
+
+        phase0_added = 0
+        for hashtag in TRADE_HASHTAGS:
+            if phase0_added >= TARGET_NEW:
+                break
+            log(supabase, f"  Scraping #{hashtag}…")
+            candidates = scrape_hashtag(page, hashtag, limit=30)
+            added_this_tag = 0
+            for c in candidates:
+                if c["username"] in existing_handles:
+                    continue
+                try:
+                    supabase.table("outreach_leads").insert({
+                        "business_name": c["username"],
+                        "location": "UK",
+                        "trade": c["trade"],
+                        "instagram_handle": c["username"],
+                    }).execute()
+                    existing_handles.add(c["username"])
+                    phase0_added += 1
+                    added_this_tag += 1
+                except Exception:
+                    pass
+                if phase0_added >= TARGET_NEW:
+                    break
+            log(supabase, f"  ✓ #{hashtag} → {added_this_tag} new handles")
+            time.sleep(random.uniform(3, 6))
+
+        log(supabase, f"Phase 0 complete — {phase0_added} new handles added", "success")
 
         # ── Phase 1: find handles ──────────────────────────────────────────────
         no_handle = (

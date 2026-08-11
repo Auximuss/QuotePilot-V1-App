@@ -1,6 +1,6 @@
-2026/08/11-14:42:30.447 3e28 Reusing MANIFEST C:\Users\Alexp\OneDrive\Pictures\Desktop\New folder (3)\app\scripts\chrome_profile\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
-2026/08/11-14:42:30.449 3e28 Recovering log #36
-2026/08/11-14:42:30.450 3e28 Reusing old log C:\Users\Alexp\OneDrive\Pictures\Desktop\New folder (3)\app\scripts\chrome_profile\Default\EdgeCoupons/coupons_data.db/000036.log 
-2026/08/11-14:42:31.707 1a28 Level-0 table #40: started
-2026/08/11-14:42:31.712 1a28 Level-0 table #40: 683444 bytes OK
-2026/08/11-14:42:31.714 1a28 Delete type=0 #36
+2026/08/11-20:57:35.598 8e20 Reusing MANIFEST C:\Users\Alexp\OneDrive\Pictures\Desktop\New folder (3)\app\scripts\chrome_profile\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/08/11-20:57:35.605 8e20 Recovering log #39
+2026/08/11-20:57:35.608 8e20 Reusing old log C:\Users\Alexp\OneDrive\Pictures\Desktop\New folder (3)\app\scripts\chrome_profile\Default\EdgeCoupons/coupons_data.db/000039.log 
+2026/08/11-20:57:37.192 5a34 Level-0 table #43: started
+2026/08/11-20:57:37.210 5a34 Level-0 table #43: 683399 bytes OK
+2026/08/11-20:57:37.213 5a34 Delete type=0 #39
