@@ -19,12 +19,19 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 SCRIPT_PATH = str(Path(__file__).parent / "instagram_agent.py")
 PORT = 4000
 
-ENV = {
-    **os.environ,
-    "SUPABASE_URL":              "https://mppnrqtfcbapkohsogap.supabase.co",
-    "SUPABASE_SERVICE_ROLE_KEY": "sb_secret_elk5sXLpQJuZgHM7eA3cug_CSQH8rEA",
-    "OPENAI_API_KEY":            "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",
-}
+# Load keys from .env.local (never committed to git)
+_env_file = Path(__file__).parent / ".env.local"
+_extra = {}
+if _env_file.exists():
+    for line in _env_file.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            _extra[k.strip()] = v.strip()
+else:
+    print("[WARN] .env.local not found — add your keys to scripts/.env.local", flush=True)
+
+ENV = {**os.environ, **_extra}
 
 _running = False
 _lock = threading.Lock()
@@ -91,9 +98,42 @@ class Handler(BaseHTTPRequestHandler):
         pass  # suppress request noise
 
 
+def self_register():
+    """Register this script to start silently at Windows login, and schedule the 7am task."""
+    import subprocess, sys
+    pythonw = sys.executable.replace("python.exe", "pythonw.exe")
+    this_file = str(Path(__file__).resolve())
+    bat_file  = str(Path(__file__).parent / "run_daily.bat")
+
+    # ── Add webhook to Windows startup registry (no admin needed) ──────────────
+    try:
+        import winreg
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                             r"Software\Microsoft\Windows\CurrentVersion\Run",
+                             0, winreg.KEY_SET_VALUE)
+        winreg.SetValueEx(key, "DemandPilotWebhook", 0, winreg.REG_SZ,
+                          f'"{pythonw}" "{this_file}"')
+        winreg.CloseKey(key)
+        print("✓ Webhook registered for auto-start at login", flush=True)
+    except Exception as e:
+        print(f"[WARN] Could not register startup: {e}", flush=True)
+
+    # ── Register 7am daily task via schtasks (no admin needed for basic tasks) ─
+    try:
+        cmd = (
+            f'schtasks /create /tn "DemandPilot_Instagram_7AM" '
+            f'/tr "cmd.exe /c \\"{bat_file}\\"" '
+            f'/sc DAILY /st 07:00 /f'
+        )
+        subprocess.run(cmd, shell=True, check=True, capture_output=True)
+        print("✓ 7am daily task registered in Task Scheduler", flush=True)
+    except Exception as e:
+        print(f"[WARN] Could not register 7am task: {e}", flush=True)
+
+
 if __name__ == "__main__":
+    self_register()
     server = HTTPServer(("0.0.0.0", PORT), Handler)
     print(f"✓ Webhook server live → http://localhost:{PORT}")
-    print("  Keep this window open. The admin panel Run button calls it.")
-    print("  Press Ctrl+C to stop.\n")
+    print("  This window can now be closed — it auto-starts at every login.\n")
     server.serve_forever()
