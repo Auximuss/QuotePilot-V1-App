@@ -26,6 +26,7 @@ export default function NewQuotePage() {
   const [error, setError] = useState<string | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
   const [hasRates, setHasRates] = useState<boolean | null>(null); // null = still checking
+  const [priceBookItems, setPriceBookItems] = useState<{ description: string; category: string; unit: string; unitPrice: number }[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -45,8 +46,9 @@ export default function NewQuotePage() {
       if (!user) { setHasRates(false); return; }
       const { data: biz } = await supabase.from("businesses").select("id").eq("owner_id", user.id).single();
       if (!biz) { setHasRates(false); return; }
-      const { count } = await supabase.from("price_book_items").select("id", { count: "exact", head: true }).eq("business_id", biz.id);
+      const { data: items, count } = await supabase.from("price_book_items").select("*", { count: "exact" }).eq("business_id", biz.id);
       setHasRates((count ?? 0) > 0);
+      if (items) setPriceBookItems(items.map((i: any) => ({ description: i.description, category: i.category, unit: i.unit ?? "", unitPrice: i.unit_price })));
     })();
   }, [isLoading, businessName]);
 
