@@ -34,11 +34,12 @@ function SettingsPageInner() {
   const searchParams = useSearchParams();
   const isSetupRedirect = searchParams.get("setup") === "1";
   const showUpgraded = searchParams.get("upgraded") === "1";
+  const tabParam = searchParams.get("tab") as Tab | null;
   const { mode, setMode } = useTheme();
   const { lang, setLang, t: i18n } = useTranslation();
   const { quotes, settings, updateSettings } = useQuote();
 
-  const [tab, setTab] = useState<Tab>("business");
+  const [tab, setTab] = useState<Tab>(tabParam ?? "business");
 
   // DB state
   const [userId, setUserId] = useState("");

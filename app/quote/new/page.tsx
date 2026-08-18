@@ -36,6 +36,47 @@ export default function NewQuotePage() {
 
   if (isLoading || businessName === "") return null;
 
+  // Block quoting until at least one rate is set
+  if (priceBookItems.length === 0) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <ScreenHeader title="New Quote" back="/home" />
+        <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+          <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-hazard/10 border border-hazard/20">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff6a1f" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+          </div>
+          <h2 className="font-barlow text-xl font-bold">Set your rates first</h2>
+          <p className="mt-2 text-sm text-textDim leading-relaxed max-w-[260px]">
+            The AI prices jobs using your day rates and materials. Add at least one rate so quotes come out accurate.
+          </p>
+          <div className="mt-6 w-full rounded-xl border border-line bg-panel px-4 py-3.5 text-left">
+            <div className="font-barlow text-xs font-semibold uppercase tracking-wide text-textDim mb-2">Takes 2 minutes</div>
+            <div className="flex items-start gap-3 mb-2.5">
+              <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-hazard/20 text-[10px] font-bold text-hazard">1</span>
+              <span className="text-sm">Go to Settings → Rates</span>
+            </div>
+            <div className="flex items-start gap-3 mb-2.5">
+              <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-hazard/20 text-[10px] font-bold text-hazard">2</span>
+              <span className="text-sm">Add your day rate or hourly rate</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-hazard/20 text-[10px] font-bold text-hazard">3</span>
+              <span className="text-sm">Come back and generate your first quote</span>
+            </div>
+          </div>
+          <button
+            onClick={() => router.push("/settings?tab=pricebook")}
+            className="mt-5 w-full rounded-xl bg-gradient-to-br from-hazard2 to-hazard py-3.5 font-barlow text-sm font-bold uppercase tracking-wide text-[#161006]"
+          >
+            Set Up My Rates →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   async function startRecording() {
     setError(null);
     setTranscript("");
