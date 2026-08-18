@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuote } from "@/lib/QuoteContext";
 import { useTranslation } from "@/lib/LanguageContext";
+import { createClient } from "@/lib/supabase/client";
 import ScreenHeader from "@/components/ScreenHeader";
 import PrimaryButton from "@/components/PrimaryButton";
 
@@ -12,7 +13,7 @@ type InputMode = "voice" | "text";
 
 export default function NewQuotePage() {
   const router = useRouter();
-  const { createDraftFromAi, priceBookItems, businessName, isLoading } = useQuote();
+  const { createDraftFromAi, businessName, isLoading } = useQuote();
   const { t } = useTranslation();
 
   // All hooks must be declared before any early return
@@ -24,6 +25,7 @@ export default function NewQuotePage() {
   const [genLabel, setGenLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
+  const [hasRates, setHasRates] = useState<boolean | null>(null); // null = still checking
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -34,10 +36,25 @@ export default function NewQuotePage() {
     if (!isLoading && businessName === "") router.replace("/settings?setup=1");
   }, [isLoading, businessName, router]);
 
+  // Fresh Supabase check for rates — bypasses stale context cache
+  useEffect(() => {
+    if (isLoading || !businessName) return;
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setHasRates(false); return; }
+      const { data: biz } = await supabase.from("businesses").select("id").eq("owner_id", user.id).single();
+      if (!biz) { setHasRates(false); return; }
+      const { count } = await supabase.from("price_book_items").select("id", { count: "exact", head: true }).eq("business_id", biz.id);
+      setHasRates((count ?? 0) > 0);
+    })();
+  }, [isLoading, businessName]);
+
   if (isLoading || businessName === "") return null;
+  if (hasRates === null) return null; // still checking rates
 
   // Block quoting until at least one rate is set
-  if (priceBookItems.length === 0) {
+  if (!hasRates) {
     return (
       <div className="flex min-h-screen flex-col">
         <ScreenHeader title="New Quote" back="/home" />

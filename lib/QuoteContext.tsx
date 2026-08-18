@@ -472,6 +472,7 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
         .upsert(
           {
             business_id: businessId,
+            label: lineItemDesc,
             description: lineItemDesc,
             category: lineItemCategory,
             unit_price: price,
