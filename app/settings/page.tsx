@@ -205,7 +205,7 @@ function SettingsPageInner() {
     if (!businessId) { setPbAddError("Business not loaded yet — wait a moment and try again."); return; }
     if (!newItem.unitPrice || newItem.unitPrice <= 0) { setPbAddError("Enter a price greater than £0."); return; }
     setPbAddLoading(true);
-    const { data, error } = await sb().from("price_book_items").insert({ business_id: businessId, description: newItem.description, category: newItem.category, unit: newItem.unit || null, unit_price: newItem.unitPrice }).select().single();
+    const { data, error } = await sb().from("price_book_items").insert({ business_id: businessId, label: newItem.description, description: newItem.description, category: newItem.category, unit: newItem.unit || null, unit_price: newItem.unitPrice }).select().single();
     if (error) { setPbAddError("Couldn't save — " + error.message); }
     else if (data) {
       setPbItems(prev => [...prev, { id: data.id, description: data.description, category: data.category, unit: data.unit ?? "", unitPrice: data.unit_price }]);
