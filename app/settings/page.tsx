@@ -95,8 +95,9 @@ function SettingsPageInner() {
   // Price book
   const [pbItems, setPbItems] = useState<PBItem[]>([]);
   const [pbLoading, setPbLoading] = useState(false);
-  const [newItem, setNewItem] = useState<Omit<PBItem, "id">>({ description: "", category: "labour", unit: "", unitPrice: 0 });
+  const [newItem, setNewItem] = useState<Omit<PBItem, "id">>({ description: "", category: "labour", unit: "per day", unitPrice: 0 });
   const [pbAddLoading, setPbAddLoading] = useState(false);
+  const [pbAddError, setPbAddError] = useState<string | null>(null);
 
   useEffect(() => {
     setValidDays(settings.defaultValidDays); setDepDefault(settings.depositByDefault);
@@ -199,10 +200,17 @@ function SettingsPageInner() {
   }
 
   async function addPriceBookItem() {
-    if (!newItem.description.trim() || !businessId) return;
+    setPbAddError(null);
+    if (!newItem.description.trim()) return;
+    if (!businessId) { setPbAddError("Business not loaded yet — wait a moment and try again."); return; }
+    if (!newItem.unitPrice || newItem.unitPrice <= 0) { setPbAddError("Enter a price greater than £0."); return; }
     setPbAddLoading(true);
     const { data, error } = await sb().from("price_book_items").insert({ business_id: businessId, description: newItem.description, category: newItem.category, unit: newItem.unit || null, unit_price: newItem.unitPrice }).select().single();
-    if (!error && data) { setPbItems(prev => [...prev, { id: data.id, description: data.description, category: data.category, unit: data.unit ?? "", unitPrice: data.unit_price }]); setNewItem({ description: "", category: "labour", unit: "", unitPrice: 0 }); }
+    if (error) { setPbAddError("Couldn't save — " + error.message); }
+    else if (data) {
+      setPbItems(prev => [...prev, { id: data.id, description: data.description, category: data.category, unit: data.unit ?? "", unitPrice: data.unit_price }]);
+      setNewItem({ description: "", category: "labour", unit: "per day", unitPrice: 0 });
+    }
     setPbAddLoading(false);
   }
 
@@ -432,51 +440,134 @@ function SettingsPageInner() {
         {/* PRICE BOOK TAB */}
         {tab === "pricebook" && (
           <div className="space-y-3">
-            <Card title="Your standard rates">
-              <p className="mb-3 text-[11px] text-textDim">The AI uses these to price jobs automatically. Add your day rates, materials, and common line items.</p>
 
+            {/* Quick-start chips */}
+            <Card title="Quick add — tap to fill the form">
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { description: "Day rate – labour", category: "labour" as const, unit: "per day", unitPrice: 250 },
+                  { description: "Half day – labour", category: "labour" as const, unit: "half day", unitPrice: 140 },
+                  { description: "Hourly rate – labour", category: "labour" as const, unit: "per hour", unitPrice: 40 },
+                  { description: "Materials (general)", category: "material" as const, unit: "each", unitPrice: 0 },
+                ].map(preset => (
+                  <button
+                    key={preset.description}
+                    onClick={() => setNewItem(preset)}
+                    className="rounded-full border border-line bg-panelRaised px-3 py-1.5 text-[11px] font-medium text-textDim transition-colors active:bg-hazard/10 active:text-hazard"
+                  >
+                    {preset.description}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-[10px] text-textDimmer">Tap any chip to pre-fill the form, then adjust the price to match your actual rate.</p>
+            </Card>
+
+            {/* Saved rates */}
+            <Card title="Your saved rates">
+              <p className="mb-3 text-[11px] text-textDim">The AI uses these to price jobs automatically.</p>
               {pbLoading ? (
                 <div className="py-6 text-center text-xs text-textDim">Loading…</div>
               ) : pbItems.length === 0 ? (
-                <div className="mb-3 rounded-xl border border-dashed border-line px-4 py-6 text-center text-xs text-textDim">
-                  No rates yet — add your first one below.
+                <div className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-xs text-textDim">
+                  No rates saved yet — add one below.
                 </div>
               ) : (
-                <div className="mb-3 space-y-1.5">
+                <div className="space-y-1.5">
                   {pbItems.map(item => (
                     <div key={item.id} className="flex items-center gap-3 rounded-xl border border-line bg-panelRaised px-3 py-2.5">
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[13px] font-medium">{item.description}</div>
                         <div className="mt-0.5 font-mono text-[10px] text-textDim">
-                          {item.category} · {item.unit || "each"} · £{item.unitPrice}
+                          {item.category === "labour" ? "Labour" : "Material"} · {item.unit || "each"} · <span className="text-hazard">£{item.unitPrice}</span>
                         </div>
                       </div>
-                      <button onClick={() => deletePriceBookItem(item.id)} className="flex-none text-textDimmer transition-colors hover:text-red-400">
+                      <button onClick={() => deletePriceBookItem(item.id)} className="flex-none p-1 text-textDimmer transition-colors active:text-red-400">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
                       </button>
                     </div>
                   ))}
                 </div>
               )}
+            </Card>
 
-              <div className="rounded-xl border border-dashed border-line p-3">
-                <div className="mb-2.5 font-mono text-[10px] uppercase tracking-wider text-textDimmer">Add new rate</div>
-                <input value={newItem.description} onChange={e => setNewItem(p => ({ ...p, description: e.target.value }))} placeholder="Description (e.g. Day rate labour)" className="field mb-2.5" />
-                <div className="grid grid-cols-3 gap-2">
-                  <select value={newItem.category} onChange={e => setNewItem(p => ({ ...p, category: e.target.value as any }))} className="select">
-                    <option value="labour">Labour</option>
-                    <option value="material">Material</option>
-                  </select>
-                  <input value={newItem.unit} onChange={e => setNewItem(p => ({ ...p, unit: e.target.value }))} placeholder="Unit (day, m²)" className="field" />
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-textDimmer">£</span>
-                    <input type="number" min={0} value={newItem.unitPrice || ""} onChange={e => setNewItem(p => ({ ...p, unitPrice: parseFloat(e.target.value) || 0 }))} placeholder="0" className="field pl-6" />
-                  </div>
+            {/* Add new rate — simplified */}
+            <Card title="Add a rate">
+              {/* What are you charging for */}
+              <Field label="What are you charging for?">
+                <input
+                  value={newItem.description}
+                  onChange={e => setNewItem(p => ({ ...p, description: e.target.value }))}
+                  placeholder="e.g. Day rate labour, Copper pipe 15mm…"
+                  className="field"
+                />
+              </Field>
+
+              {/* Labour or Material */}
+              <div className="mt-3">
+                <div className="mb-1.5 text-[11px] font-semibold text-textDim">Type</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["labour", "material"] as const).map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setNewItem(p => ({ ...p, category: cat }))}
+                      className={`rounded-xl border px-3 py-2.5 text-[12px] font-semibold transition-colors ${newItem.category === cat ? "border-hazard/50 bg-hazard/10 text-hazard" : "border-line bg-panelRaised text-textDim"}`}
+                    >
+                      {cat === "labour" ? "👷 Labour" : "🧱 Material"}
+                    </button>
+                  ))}
                 </div>
-                <button onClick={addPriceBookItem} disabled={!newItem.description.trim() || pbAddLoading} className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-hazard2 to-hazard py-2.5 text-xs font-bold text-[#161006] disabled:opacity-40">
-                  {pbAddLoading ? "Adding…" : "+ Add rate"}
-                </button>
+                <p className="mt-1 text-[10px] text-textDimmer">
+                  {newItem.category === "labour" ? "Your time — day rates, hourly rates, call-out fees." : "Physical items — pipe, tiles, fixtures, etc."}
+                </p>
               </div>
+
+              {/* How you charge */}
+              <div className="mt-3">
+                <div className="mb-1.5 text-[11px] font-semibold text-textDim">How do you charge?</div>
+                <select
+                  value={newItem.unit}
+                  onChange={e => setNewItem(p => ({ ...p, unit: e.target.value }))}
+                  className="select w-full"
+                >
+                  <option value="per day">Per day</option>
+                  <option value="per hour">Per hour</option>
+                  <option value="half day">Per half day</option>
+                  <option value="per m²">Per m²</option>
+                  <option value="per m">Per metre</option>
+                  <option value="each">Per item / each</option>
+                  <option value="fixed">Fixed price</option>
+                </select>
+              </div>
+
+              {/* Price */}
+              <div className="mt-3">
+                <div className="mb-1.5 text-[11px] font-semibold text-textDim">
+                  Your price (£) {newItem.unit ? `— ${newItem.unit}` : ""}
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-textDimmer">£</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={newItem.unitPrice || ""}
+                    onChange={e => setNewItem(p => ({ ...p, unitPrice: parseFloat(e.target.value) || 0 }))}
+                    placeholder="0.00"
+                    className="field pl-7"
+                  />
+                </div>
+              </div>
+
+              {pbAddError && (
+                <div className="mt-2.5 rounded-xl border border-warn/40 bg-warn/10 px-3 py-2 text-[11px] text-[#e0c26b]">{pbAddError}</div>
+              )}
+
+              <button
+                onClick={addPriceBookItem}
+                disabled={!newItem.description.trim() || pbAddLoading}
+                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-hazard2 to-hazard py-3 text-sm font-bold text-[#161006] disabled:opacity-40"
+              >
+                {pbAddLoading ? "Saving…" : "+ Save rate"}
+              </button>
             </Card>
           </div>
         )}
